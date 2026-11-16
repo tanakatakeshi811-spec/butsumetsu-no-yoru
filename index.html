@@ -332,6 +332,55 @@ body.touch #prog { top: 48%; }
   body.touch #rotate span { color: var(--dim); }
 }
 
+/* ---------- こわさ(レベル・心臓の音・急に上がった時の光) ---------- */
+.bar.tagged { grid-template-columns: 4.6em 1fr auto; }
+.bar em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--dim); white-space: nowrap; }
+.bar.fear.lv1 em { color: #d8b4e0; }
+.bar.fear.lv2 em { color: #f08a8a; }
+.bar.fear.lv3 em { color: #ff4d55; }
+.bar.fear.lv3 b { background: linear-gradient(90deg, var(--blood), #ff4d55); }
+.h-me.fearup .bar.fear i { box-shadow: 0 0 0 1px #ff4d55, 0 0 10px rgba(255, 77, 85, 0.75); }
+.h-me.fearup .bar.fear em { color: #ff4d55; }
+#vign.beat { animation: beat 1.05s ease-in-out infinite; }
+#vign.panic { animation-duration: 0.62s; }
+@keyframes beat { 0%, 100% { filter: brightness(1); } 12% { filter: brightness(1.5); } 26% { filter: brightness(1.05); } 38% { filter: brightness(1.35); } }
+
+/* ---------- カカシ男のこうげきボタン(長押し) ---------- */
+.tb small { pointer-events: none; display: block; font-size: 9px; font-weight: 700; opacity: 0.8; margin-top: -10px; }
+.tb.t3 { right: calc(118px + env(safe-area-inset-right, 0px)); background: rgba(80, 56, 20, 0.7); }
+
+/* ---------- 管理者モード ---------- */
+.adm { display: grid; gap: 8px; padding: 12px; border: 1px dashed rgba(227, 166, 74, 0.45); border-radius: 8px; }
+.adm.on { border-style: solid; background: rgba(227, 166, 74, 0.06); }
+.adm h3 { margin: 0; }
+.adm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.adm-l { width: 4em; color: var(--dim); font-size: 12px; }
+.adm input, .adm select { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--fog); color: var(--paper); font: inherit; min-width: 0; }
+.adm input[type="number"] { width: 9em; }
+.adm input[type="password"] { width: 10em; }
+.adm select { max-width: 13em; }
+.adm-msg:empty { display: none; }
+.card.adm-menu { width: min(640px, 100%); }
+.m-btns.left { justify-content: flex-start; }
+.adm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.adm-tog { position: relative; display: grid; gap: 4px; text-align: left; padding: 10px 12px 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--fog); cursor: pointer; }
+.adm-tog b { font-size: 14px; }
+.adm-tog small { color: var(--dim); font-size: 11px; line-height: 1.5; padding-right: 2.6em; }
+.adm-tog i { position: absolute; right: 10px; top: 10px; font-style: normal; font-size: 11px; font-weight: 900; color: var(--dim); }
+.adm-tog.on { border-color: var(--lantern); background: rgba(227, 166, 74, 0.14); }
+.adm-tog.on i { color: var(--lantern); }
+.adm-tog:focus-visible { outline: 2px solid var(--lantern); outline-offset: 2px; }
+
+/* ESP(カベごしの名前) */
+#esp { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.espl { position: absolute; transform: translate(-50%, -100%); padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(64, 208, 255, 0.6); color: #bfefff; }
+.espl.k { border-color: rgba(255, 60, 60, 0.85); color: #ffb0b0; font-size: 12px; }
+.espl.it { font-size: 10px; border-color: rgba(124, 184, 138, 0.6); color: #cdeed5; }
+.espl.it.part { border-color: rgba(232, 195, 74, 0.8); color: #f6e2a0; }
+.espl.it.weapon { border-color: rgba(200, 200, 200, 0.6); color: #e4e4e4; }
+.espl.far { opacity: 0.6; }
+@media (prefers-reduced-motion: reduce) { #vign.beat, #vign.panic { animation: none; } }
+
 </style>
 </head>
 <body>
@@ -361,21 +410,21 @@ var __export = (target, all2) => {
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/main.js
-import * as THREE9 from "three";
+import * as THREE10 from "three";
 
 // src/data.js
 var HALF = 90;
 var CELL = 0.5;
 var N = 360;
-var VERSION = "bm2";
+var VERSION = "bm3";
 var MATCH_TIME = 20 * 60;
 var POLICE_DELAY = 300;
 var HERO_DELAY = 30;
 var HERO_NEED = 2;
 var DIFF = {
-  easy: { name: "やさしい", kSpeed: 0.92, react: 0.55, cd: 1.25, killDelay: 1.9, view: 0.85, throwP: 0.25, bot: 0.8, mash: 5, block: 0.15, heavy: 0.3 },
-  normal: { name: "ふつう", kSpeed: 1, react: 0.3, cd: 1, killDelay: 1.3, view: 1, throwP: 0.45, bot: 1, mash: 7, block: 0.35, heavy: 0.5 },
-  hard: { name: "こわい", kSpeed: 1.06, react: 0.16, cd: 0.85, killDelay: 0.85, view: 1.15, throwP: 0.6, bot: 1.2, mash: 9, block: 0.55, heavy: 0.7 }
+  easy: { name: "やさしい", kSpeed: 0.92, react: 0.55, cd: 1.25, killDelay: 1.9, view: 0.85, throwP: 0.25, bot: 0.8, mash: 5, block: 0.15, heavy: 0.3, lunge: 0.15, dashGap: 30 },
+  normal: { name: "ふつう", kSpeed: 1, react: 0.3, cd: 1, killDelay: 1.3, view: 1, throwP: 0.45, bot: 1, mash: 7, block: 0.35, heavy: 0.5, lunge: 0.25, dashGap: 20 },
+  hard: { name: "こわい", kSpeed: 1.06, react: 0.16, cd: 0.85, killDelay: 0.85, view: 1.15, throwP: 0.6, bot: 1.2, mash: 9, block: 0.55, heavy: 0.7, lunge: 0.4, dashGap: 12 }
 };
 var STUDENTS = [
   {
@@ -521,12 +570,13 @@ var KILLER = {
   rageTime: 15 * 60,
   rageDmg: 6,
   // 15 分で怒る。ダメージ 1 につき 6 秒早まる
-  cd: { dash: 30, sense: 15, stalk: 30, morph: 30 },
+  cd: { dash: 7, sense: 15, stalk: 30, morph: 30 },
   rageCd: 0.66,
+  // 影走りは終わってから 7 秒で、また使える
   dur: { dash: 2.2 * 2, sense: 15, stalk: 20 },
   // 影走りは前の 2 倍の長さ・1.5 倍の速さ
-  unlock: { morph: 0, sense: 45, dash: 135, stalk: 255 },
-  // 使えるようになる時間(秒)
+  unlock: { morph: 0, dash: 20, sense: 45, stalk: 255 },
+  // 使えるようになる時間(秒)。影走りは 20 秒から
   senseR: 45,
   senseRage: 75,
   mashPer: 6,
@@ -536,13 +586,18 @@ var KILLER = {
   doorHits: 6,
   throwCd: 3.5
 };
-var VAULT = { climb: 0.85 / 2.25, open: 0.25, dive: 0.45, getUp: 2.56, glass: 8 * 3, openDiv: 3.5 };
+var VAULT = { climb: 0.85 / 2.25 * 6.7, open: 0.25, dive: 0.45, getUp: 3.5, glass: 8 * 3 * 2, openDiv: 3.5 };
+var LUNGE = { hold: 0.35, dist: 5, dur: 0.42, reach: 1.35, miss: 0.7 };
 var STANCE = { heavy: 1.75, heavyStun: 1.3, studentSpeed: 0.6, heavyCost: 15, normalCost: 8, dodgeCost: 18, dodgeDur: 0.35, dodgeDist: 2.4 };
 var walkSpeed = (st) => 2.9 + st.speed * 0.06;
 var runSpeed = (st) => 4.7 + st.speed * 0.16;
 var staminaDrain = (st) => 17 - st.stamina * 0.9;
 var staminaRegen = (st) => 6 + st.stamina * 0.9;
 var fearGain = (st) => 1.35 - st.calm * 0.08;
+var FEAR = { rise: 3, hit: 26, sickle: 22, trap: 30, chase: 5, lv: [30, 60, 85], names: ["落ち着いている", "ドキドキ", "こわい", "パニック"] };
+var fearRelax = (st) => 1.5 + st.calm * 0.35;
+var shockFade = (st) => 0.8 + st.calm * 0.22;
+var fearLevel = (f) => f >= FEAR.lv[2] ? 3 : f >= FEAR.lv[1] ? 2 : f >= FEAR.lv[0] ? 1 : 0;
 var noiseMul = (st) => 1.3 - st.stealth * 0.07;
 var struggleRate = (st) => 9 + (st.power + st.calm) * 1.3;
 var repairZone = (st) => 0.09 + st.repair * 0.012;
@@ -594,7 +649,7 @@ var G = {
   touch: false,
   scene: null
 };
-var SKEYS = ["sens", "vol", "music", "quality", "diff", "role", "charId", "name", "pref", "touchSens"];
+var SKEYS = ["sens", "vol", "music", "quality", "diff", "role", "charId", "name", "pref", "touchSens", "admin"];
 var SET = {
   sens: 1,
   vol: 0.8,
@@ -606,6 +661,7 @@ var SET = {
   name: "",
   pref: "any",
   touchSens: 1,
+  admin: false,
   load() {
     try {
       const s = JSON.parse(localStorage.getItem("butsumetsu_settings") || "{}");
@@ -1265,6 +1321,15 @@ function poseRig(rig, a, dt) {
       tLean = a.atk.t / a.atk.dur > 0.4 ? 0.3 : -0.08;
       if (a.atk.heavy) tArmL = tArmR * 0.6;
     }
+    if (a.lunge) {
+      const p = Math.min(1, a.lunge.t / (a.lunge.dur || LUNGE.dur));
+      tLean = 0.85;
+      tArmR = -2.9;
+      tArmL = -1.7;
+      tLegL = 0.95;
+      tLegR = -0.75;
+      bodyY = Math.sin(p * Math.PI) * 0.35;
+    }
     if (a.throwT > 0) tArmR = -2.6 + (0.45 - a.throwT) * 7;
     if (a.searchT > 0) {
       tArmL = -1.2;
@@ -1291,6 +1356,16 @@ function poseRig(rig, a, dt) {
     if (a.getUp > 0) {
       bodyRotX = -1.42 * Math.min(1, a.getUp / 0.7);
       bodyY = 0.3 * Math.min(1, a.getUp / 0.7);
+    }
+    if (a.missT > 0) {
+      const p = 1 - a.missT / LUNGE.miss, lie = p < 0.45 ? Math.min(1, p / 0.12) : Math.max(0, 1 - (p - 0.45) / 0.55);
+      bodyRotX = 1.25 * lie;
+      bodyY = 0.28 * lie;
+      tArmL = -2.4 * lie;
+      tArmR = -2 * lie;
+      tLegL = 0.2;
+      tLegR = -0.1;
+      tLean = 0;
     }
   } else {
     if (a.crouch) {
@@ -1416,7 +1491,7 @@ function poseRig(rig, a, dt) {
   rig.legR.rotation.x = L(rig.legR.rotation.x, tLegR - tLean * 0.6, k * 1.2);
   rig.head.rotation.x = L(rig.head.rotation.x, tHead, k);
   rig.body.position.y = L(rig.body.position.y, bodyY, a.vault || a.swim ? 1 : k);
-  rig.body.rotation.x = L(rig.body.rotation.x, bodyRotX, a.vault ? 1 : k * 0.7);
+  rig.body.rotation.x = L(rig.body.rotation.x, bodyRotX, a.vault || a.missT > 0 ? Math.min(1, k * 2) : k * 0.7);
 }
 function makeItemMesh(type) {
   const g = new THREE.Group();
@@ -2738,14 +2813,15 @@ var KEYMAP = {
   ShiftRight: "shift",
   KeyC: "crouch",
   Enter: "enter",
-  KeyV: "v"
+  KeyV: "v",
+  F1: "admin"
 };
 function initInput(cv) {
   canvas = cv;
   addEventListener("keydown", (e2) => {
     const tag2 = e2.target && e2.target.tagName || "";
     if (tag2 === "INPUT" || tag2 === "TEXTAREA" || tag2 === "SELECT") return;
-    if (e2.code === "Tab" || e2.code === "Space" || e2.code.startsWith("Arrow")) e2.preventDefault();
+    if (e2.code === "Tab" || e2.code === "Space" || e2.code === "F1" || e2.code.startsWith("Arrow")) e2.preventDefault();
     if (!e2.repeat) {
       const a = KEYMAP[e2.code];
       if (a) bus.emit("press", a);
@@ -2761,6 +2837,7 @@ function initInput(cv) {
     IN.keys.clear();
     IN.lmb = false;
     IN.rmb = false;
+    bus.emit("atkCancel");
   });
   cv.addEventListener("contextmenu", (e2) => e2.preventDefault());
   cv.addEventListener("mousedown", (e2) => {
@@ -2775,6 +2852,7 @@ function initInput(cv) {
       IN.sy = e2.clientY;
       IN.drag = false;
       if (IN.locked) bus.emit("press", "attack");
+      if (IN.locked || IN.fallback && !IN.uiOpen) bus.emit("atkDown");
     }
     if (e2.button === 2) {
       IN.rmb = true;
@@ -2785,6 +2863,7 @@ function initInput(cv) {
     if (e2.button === 0 && IN.lmb) {
       IN.lmb = false;
       if (IN.fallback && !IN.drag && G.mode === "play" && !IN.uiOpen) bus.emit("press", "attack");
+      bus.emit("atkUp");
     }
     if (e2.button === 2 && IN.rmb) {
       IN.rmb = false;
@@ -2799,7 +2878,10 @@ function initInput(cv) {
       return;
     }
     if (IN.fallback && IN.lmb && G.mode === "play" && !IN.uiOpen) {
-      if (!IN.drag && Math.hypot(e2.clientX - IN.sx, e2.clientY - IN.sy) > 6) IN.drag = true;
+      if (!IN.drag && Math.hypot(e2.clientX - IN.sx, e2.clientY - IN.sy) > 6) {
+        IN.drag = true;
+        bus.emit("atkCancel");
+      }
       if (IN.drag) {
         IN.dx += e2.movementX * 1.4;
         IN.dy += e2.movementY * 1.4;
@@ -3288,6 +3370,18 @@ function sfx(name, o = {}) {
       for (let i = 0; i < 6; i++) tone(200 + Math.random() * 2e3, t + i * 0.05, 0.04, { type: "square", gain: 0.05, out });
       noise(t, 0.4, { gain: 0.15, freq: 2500, q: 0.4, out });
       break;
+    case "lunge":
+      noise(t, 0.35, { gain: 0.22, freq: 500, q: 1.2, f2: 2600, out });
+      tone(70, t, 0.3, { type: "sawtooth", gain: 0.12, f2: 50, out });
+      break;
+    case "thud":
+      tone(65, t, 0.35, { gain: 0.5, f2: 35, out });
+      noise(t, 0.25, { gain: 0.2, freq: 350, q: 0.6, out });
+      break;
+    case "fearUp":
+      tone(55, t, 0.15, { gain: 0.4, f2: 40, out });
+      tone(55, t + 0.22, 0.12, { gain: 0.3, f2: 40, out });
+      break;
     case "unlock":
       tone(330, t, 0.5, { type: "sawtooth", gain: 0.06, f2: 165, out });
       tone(55, t, 0.6, { gain: 0.2, out });
@@ -3349,7 +3443,7 @@ function beat(t, s) {
 }
 
 // src/actors.js
-import * as THREE7 from "three";
+import * as THREE8 from "three";
 
 // src/combat.js
 var combat_exports = {};
@@ -3367,8 +3461,10 @@ __export(combat_exports, {
   fireFlare: () => fireFlare,
   flashAt: () => flashAt,
   grab: () => grab,
+  guarding: () => guarding,
   hitDoor: () => hitDoor,
   hurtKiller: () => hurtKiller,
+  killerLunge: () => killerLunge,
   killerMash: () => killerMash,
   killerSwing: () => killerSwing,
   placeStudentTrap: () => placeStudentTrap,
@@ -3384,6 +3480,7 @@ __export(combat_exports, {
   unlockLeft: () => unlockLeft,
   updateCombat: () => updateCombat,
   updateKillerStun: () => updateKillerStun,
+  updateLunge: () => updateLunge,
   updateSense: () => updateSense,
   useDash: () => useDash,
   useFirecracker: () => useFirecracker,
@@ -3394,13 +3491,13 @@ __export(combat_exports, {
 });
 
 // src/interact.js
-import * as THREE6 from "three";
+import * as THREE7 from "three";
 
 // src/objectives.js
-import * as THREE5 from "three";
+import * as THREE6 from "three";
 
 // src/ui.js
-import * as THREE4 from "three";
+import * as THREE5 from "three";
 
 // src/perks.js
 var RARITY = [
@@ -7976,12 +8073,13 @@ function studentCmd(a, c) {
 function killerCmd(k, c) {
   const yaw = c.yaw != null ? c.yaw : k.rot;
   if (k.stun) {
-    if (c.k === "use" || c.k === "mash" || c.k === "space" || c.k === "atk") killerMash(k);
+    if (c.k === "use" || c.k === "mash" || c.k === "space" || c.k === "atk" || c.k === "lunge") killerMash(k);
     return;
   }
   switch (c.k) {
     case "atk":
     case "space":
+    case "lunge":
       if (k.grab) {
         startKill(k);
         return;
@@ -7989,6 +8087,9 @@ function killerCmd(k, c) {
       if (c.k === "atk") {
         k.rot = yaw;
         killerSwing(k, !!c.heavy);
+      } else if (c.k === "lunge") {
+        k.rot = yaw;
+        if (!killerLunge(k, !!c.heavy)) killerSwing(k, !!c.heavy);
       }
       break;
     case "use": {
@@ -8092,6 +8193,10 @@ function think(s) {
   if (s.trapped || s.vault || s.atk || s.trip > 0 || s.down || s.dodge) return;
   if (k && k.state === "ok" && k.atk && k.atk.t < 0.22 && dist(s, k) < 2.5 && s.stam > 25 && Math.random() < 0.3 * ai.skill) {
     const a = angTo(k, s) + (Math.random() < 0.5 ? 1.6 : -1.6);
+    if (dodge(s, Math.sin(a), Math.cos(a))) return;
+  }
+  if (k && k.state === "ok" && k.lunge && k.lunge.t < 0.2 && dist(s, k) < 6 && Math.abs(angDiff(k.rot, angTo(k, s))) < 0.6 && s.stam > 20 && Math.random() < 0.35 * ai.skill) {
+    const a = k.rot + (Math.random() < 0.5 ? 1.6 : -1.6);
     if (dodge(s, Math.sin(a), Math.cos(a))) return;
   }
   if (k && canSeal(s)) {
@@ -8301,7 +8406,8 @@ function exec(s, dt) {
   } else if (r === "win") {
     const w = windows[s.path[s.pi].ref];
     const k = G.killer;
-    const hurry = ai.mode === "flee" && k && dist(s, k) < 9;
+    const hurt = w.state === "open" ? VAULT.glass / VAULT.openDiv : VAULT.glass;
+    const hurry = ai.mode === "flee" && k && dist(s, k) < 9 && s.hp > hurt + 12;
     vault(s, w, () => passGate(s), hurry);
   } else if (r === "arrived") arrive(s);
   if (ai.closeDoor) {
@@ -8476,7 +8582,7 @@ function pickTask(s) {
 }
 function aiKiller(k, dt) {
   const ai = k.ai;
-  if (!k.stun && !k.atk && !k.grab) {
+  if (!k.stun && !k.atk && !k.grab && !k.lunge && !(k.missT > 0)) {
     for (const s of G.students) {
       if (s.state !== "ok" || !s.atk || s.atk.t > 0.2 || dist(s, k) > 2.7) continue;
       if (Math.random() < DIFF[G.diff].block * dt * 8) {
@@ -8505,7 +8611,7 @@ function moveTo(k, x, z, chase2 = false) {
 }
 function thinkKiller(k) {
   const ai = k.ai, D = DIFF[G.diff];
-  if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.atk || k.throwT > 0) return;
+  if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.atk || k.lunge || k.missT > 0 || k.throwT > 0) return;
   let best = null, bs = 1e9;
   for (const s of G.students) {
     if (s.state !== "ok") continue;
@@ -8656,10 +8762,18 @@ function chase(k, s) {
     return;
   }
   const clear = d < 22 && walkClear(k.x, k.z, s.x, s.z, 0.35);
-  if (d > 7 && d < 26 && k.cd.dash <= 0 && unlockLeft("dash") <= 0 && clear && !k.swim && Math.random() < 0.7) {
+  if (d > 2.3 && d < 4.8 && !k.swim && walkClear(k.x, k.z, s.x, s.z, 0.4) && Math.random() < D.lunge) {
+    const lx = s.x + (s.vx || 0) * 0.25, lz = s.z + (s.vz || 0) * 0.25;
+    k.rot = Math.atan2(lx - k.x, lz - k.z);
+    k.mx = k.mz = 0;
+    k.path = null;
+    if (killerLunge(k, s.hp < 40 && Math.random() < D.heavy)) return;
+  }
+  if (d > 7 && d < 26 && k.cd.dash <= 0 && unlockLeft("dash") <= 0 && G.t - (ai.dashAt || -99) > D.dashGap && clear && !k.swim && Math.random() < 0.7) {
     k.rot = angTo(k, s);
     if (useDash(k)) {
       ai.dashTo = s;
+      ai.dashAt = G.t;
       return;
     }
   }
@@ -8755,7 +8869,7 @@ function patrol(k) {
 function execKiller(k, dt) {
   const ai = k.ai;
   k.faceT = null;
-  if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.atk && k.atk.lock || k.throwT > 0) {
+  if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.atk && k.atk.lock || k.lunge || k.missT > 0 || k.throwT > 0) {
     k.mx = k.mz = 0;
     return;
   }
@@ -9201,6 +9315,8 @@ function flagsOf(a) {
     if (a.throwT > 0) f |= 2097152;
     if (a.getUp > 0) f |= 4194304;
     if (a.maskOff) f |= 8388608;
+    if (a.lunge) f |= 16777216;
+    if (a.missT > 0) f |= 33554432;
   }
   return f;
 }
@@ -9333,6 +9449,8 @@ function applySnap(s) {
       a.searchT = fl & 1048576 ? 1 : 0;
       a.throwT = fl & 2097152 ? 0.3 : 0;
       a.getUp = fl & 4194304 ? 0.5 : 0;
+      a.lunge = fl & 16777216 ? a.lunge || { t: 0, dur: LUNGE.dur, net: true } : null;
+      a.missT = fl & 33554432 ? a.missT > 0 ? a.missT : LUNGE.miss : 0;
       const mo = !!(fl & 8388608);
       if (mo && !a.maskOff) {
         const m = makeMaskDrop();
@@ -9357,8 +9475,17 @@ function applySnap(s) {
     a.vehicle = veh >= 0 ? G.vehicles[veh] : null;
     a.seat = seat;
     if (a.vehicle) a.vehicle.seats[seat] = a;
-    const locked = a.state !== "ok" || a.vault || a.down || a.trapped || a.trip || a.dodge || a.act && !a.act.move || a.kind === "killer" && (a.stun || a.getUp > 0 || a.searchT > 0 || a.morphT > 0 || a.grab || a.throwT > 0 || a.atk && a.kind === "killer");
-    if (isMe) {
+    const locked = a.state !== "ok" || a.vault || a.down || a.trapped || a.trip || a.dodge || a.act && !a.act.move || a.kind === "killer" && (a.stun || a.getUp > 0 || a.searchT > 0 || a.morphT > 0 || a.grab || a.throwT > 0 || a.lunge || a.missT > 0 || a.atk && a.kind === "killer");
+    if (isMe && a.kind === "killer" && (a.lunge || a.missT > 0)) {
+      a.tx = x;
+      a.tz = z;
+      a.rot = rot;
+      if (tp !== a.tp || Math.hypot(x - a.x, z - a.z) > 6) {
+        a.x = x;
+        a.z = z;
+      }
+      a.tp = tp;
+    } else if (isMe) {
       if (tp !== a.tp || locked || prevState !== a.state) {
         if (!a.vault) {
           a.x = x;
@@ -9527,6 +9654,13 @@ function clientTick(dt) {
     }
     if (a.down) a.down.t = Math.min(a.down.dur, a.down.t + dt);
     if (a.killT != null) a.killT += dt;
+    if (a.lunge) a.lunge.t = Math.min(a.lunge.dur, a.lunge.t + dt);
+    if (a.missT > 0) a.missT = Math.max(1e-3, a.missT - dt);
+    if (a === G.me && (a.lunge || a.missT > 0) && a.tx != null) {
+      a.x += (a.tx - a.x) * k;
+      a.z += (a.tz - a.z) * k;
+      continue;
+    }
     if (a === G.me || a.tx == null || !alive(a) && a.state !== "dead") continue;
     if (a.state === "vehicle") continue;
     const ox = a.x, oz = a.z;
@@ -9560,6 +9694,277 @@ function clientTick(dt) {
     snapGot = 0;
     say("ホストからの連絡がとだえた…", "bad");
   }
+}
+
+// src/admin.js
+import * as THREE4 from "three";
+var PASS = 1274659978;
+function fnv(str) {
+  let h = 2166136261;
+  for (const c of new TextEncoder().encode(str)) {
+    h ^= c;
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+var checkPass = (v) => fnv("butsumetsu-admin:" + String(v).trim()) === PASS;
+var ADM = { esp: false, espItems: false, allPerks: false, god: false, infStam: false, noCd: false };
+var cheatsAllowed = () => !!SET.admin && G.net === "solo";
+function adminSection(refresh, openPerks) {
+  if (!SET.admin) {
+    const inp = el("input", { type: "password", inputmode: "numeric", maxlength: 12, placeholder: "パスワード", autocomplete: "off", "aria-label": "管理者パスワード" });
+    const msg = el("p", { class: "dim adm-msg" }, "");
+    const go = () => {
+      if (checkPass(inp.value)) {
+        SET.admin = true;
+        SET.save();
+        refresh();
+      } else {
+        msg.textContent = "パスワードがちがう";
+        inp.value = "";
+        inp.focus();
+      }
+    };
+    inp.addEventListener("keydown", (e2) => {
+      if (e2.key === "Enter") go();
+    });
+    return el("div", { class: "adm" }, el("h3", null, "管理者モード"), el("div", { class: "adm-row" }, inp, el("button", { class: "btn sm", onclick: go }, "入る")), msg);
+  }
+  const cpIn = el("input", { type: "number", min: 0, max: 99999999, step: 100, value: PROF.cp, "aria-label": "CP" });
+  const note = el("p", { class: "dim adm-msg" }, "");
+  const done = (t) => {
+    saveProfile();
+    refresh();
+    setTimeout(() => {
+      const n = document.querySelector(".adm-msg");
+      if (n) n.textContent = t;
+    }, 0);
+  };
+  const setCP = (v) => {
+    PROF.cp = clamp(Math.round(+v || 0), 0, 99999999);
+    done(`CP を ${PROF.cp.toLocaleString()} にした`);
+  };
+  const perkSel = el("select", { "aria-label": "パーク" }, PERKS.map((p) => el("option", { value: p.id }, p.name)));
+  const rarSel = el("select", { "aria-label": "レア度" }, RARITY.map((r, i) => el("option", { value: i, selected: i === 5 ? true : null }, r.name)));
+  let sure = false;
+  const clearBtn = el("button", { class: "btn sm danger", onclick: () => {
+    if (!sure) {
+      sure = true;
+      clearBtn.textContent = "もう一度押すと全部消える";
+      return;
+    }
+    PROF.owned = [];
+    PROF.eq = {};
+    done("パークを全部消した");
+  } }, "持っているパークを全部消す");
+  return el(
+    "div",
+    { class: "adm on" },
+    el("h3", null, "管理者モード(ON)"),
+    el("div", { class: "adm-row" }, el("span", { class: "adm-l" }, "CP"), cpIn, el("button", { class: "btn sm", onclick: () => setCP(cpIn.value) }, "この CP にする")),
+    el("div", { class: "adm-row" }, el("span", { class: "adm-l" }, ""), el("button", { class: "btn sm", onclick: () => setCP(PROF.cp + 1e3) }, "+1,000"), el("button", { class: "btn sm", onclick: () => setCP(PROF.cp + 1e4) }, "+10,000"), el("button", { class: "btn sm", onclick: () => setCP(0) }, "0 にする")),
+    el("div", { class: "adm-row" }, el("span", { class: "adm-l" }, "パーク"), perkSel, rarSel, el("button", { class: "btn sm", onclick: () => {
+      const id = perkSel.value, r = +rarSel.value;
+      PROF.owned.push({ u: PROF.nextU++, id, r });
+      done(`「${PERK[id].name}」(${RARITY[r].name})をもらった`);
+    } }, "もらう")),
+    el("div", { class: "adm-row" }, el("span", { class: "adm-l" }, ""), el("button", { class: "btn sm", onclick: () => {
+      let n = 0;
+      for (const p of PERKS) if (!PROF.owned.some((o) => o.id === p.id && o.r === 5)) {
+        PROF.owned.push({ u: PROF.nextU++, id: p.id, r: 5 });
+        n++;
+      }
+      done(n ? `伝説のパークを ${n} 個もらった` : "もう全部持っている");
+    } }, "全部のパークを伝説でもらう"), clearBtn, openPerks ? el("button", { class: "btn sm", onclick: openPerks }, "パーク画面へ") : null),
+    el("p", { class: "dim" }, `持っているパーク ${PROF.owned.length} 個。試合中は F1(スマホは上の「管」)で、ESP・パーク全開放・無敵などが使える(ひとりで遊ぶ時だけ)。`),
+    note,
+    el("div", { class: "adm-row" }, el("button", { class: "btn sm", onclick: () => {
+      SET.admin = false;
+      SET.save();
+      Object.keys(ADM).forEach((k) => ADM[k] = false);
+      applyCheats();
+      refresh();
+    } }, "管理者モードをやめる"))
+  );
+}
+function adminMenu(close) {
+  if (!cheatsAllowed()) {
+    return el(
+      "div",
+      { class: "card adm-menu" },
+      el("h2", null, "管理者メニュー"),
+      el("p", null, SET.admin ? "クイックプレイ中は使えない(ほかの人と公平にするため)。ひとりで遊ぶ時に使ってね。" : "設定の「管理者モード」でパスワードを入れると使える。"),
+      el("div", { class: "m-btns" }, el("button", { class: "btn primary", onclick: close }, "とじる"))
+    );
+  }
+  const me = G.me, isK = !!(me && me.kind === "killer");
+  const keys2 = isK ? ["esp", "espItems", "noCd"] : ["esp", "espItems", "allPerks", "god", "infStam"];
+  const btns = [];
+  const tog = (key, label, sub) => {
+    const b = el(
+      "button",
+      { class: "adm-tog" + (ADM[key] ? " on" : ""), "aria-pressed": String(ADM[key]), onclick: () => {
+        ADM[key] = !ADM[key];
+        applyCheats();
+        paint();
+      } },
+      el("b", null, label),
+      el("small", null, sub),
+      el("i", null, "")
+    );
+    b.dataset.k = key;
+    btns.push(b);
+    return b;
+  };
+  const paint = () => {
+    for (const b of btns) {
+      const on = ADM[b.dataset.k];
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", String(on));
+      b.querySelector("i").textContent = on ? "ON" : "OFF";
+    }
+  };
+  const all2 = (v) => {
+    for (const k of keys2) ADM[k] = v;
+    applyCheats();
+    paint();
+  };
+  const node = el(
+    "div",
+    { class: "card adm-menu" },
+    el("h2", null, "管理者メニュー"),
+    el("p", { class: "dim" }, "F1 か「とじる」でもどる。ひとりで遊ぶ時だけ使える。"),
+    el("div", { class: "m-btns left" }, el("button", { class: "btn primary", onclick: () => {
+      all2(true);
+      close();
+    } }, "全部オンでもどる"), el("button", { class: "btn", onclick: () => all2(true) }, "全部オン"), el("button", { class: "btn", onclick: () => all2(false) }, "全部オフ")),
+    el(
+      "div",
+      { class: "adm-grid" },
+      tog("esp", "ESP", "カベごしに全員が見える(名前・きょり・かくれ中)"),
+      tog("espItems", "ESP(道具)", "落ちている道具と、引き出しの中身が見える"),
+      isK ? tog("noCd", "力すぐ使える", "霧渡り・影走り・気配・忍び足のロックとクールダウンなし") : null,
+      isK ? null : tog("allPerks", "パーク全開放", `${PERKS.length} 種類の「＋」を全部・伝説で(「－」はなし)。最初にもらえる道具も入る`),
+      isK ? null : tog("god", "無敵", "ケガをしない・つかまれない・ワナにかからない"),
+      isK ? null : tog("infStam", "スタミナ無限", "走ってもスタミナがへらない")
+    ),
+    isK ? el("div", { class: "m-btns left" }, el("button", { class: "btn", onclick: () => {
+      me.sickles = KILLER.sickleMax;
+      me.traps = KILLER.traps;
+      say("投げ鎌とトラバサミを補充した", "dim");
+    } }, "投げ鎌とワナを補充")) : null,
+    el("div", { class: "m-btns" }, el("button", { class: "btn primary", onclick: close }, "とじる"))
+  );
+  paint();
+  return node;
+}
+function applyCheats() {
+  const me = G.me;
+  if (!me) return;
+  const on = cheatsAllowed();
+  if (me.kind === "killer") {
+    me.noCd = on && ADM.noCd;
+    return;
+  }
+  me.god = on && ADM.god;
+  me.infStam = on && ADM.infStam;
+  const want = on && ADM.allPerks;
+  if (want === !!me.allPerks) return;
+  me.allPerks = want;
+  me.pm = want ? allPerkMods() : modsOf(me.perks);
+  const old = me.stamMax || 100;
+  me.stamMax = 100 * (1 + (me.pm.stamMax || 0) / 100);
+  me.stam = Math.min(me.stamMax, me.stam * (me.stamMax / old));
+  if (want) giveStartItems(me);
+}
+function allPerkMods() {
+  const m = {};
+  for (const p of PERKS) for (const ef of p.pos) m[ef.k] = (m[ef.k] || 0) + ef.b;
+  return m;
+}
+function giveStartItems(a) {
+  if (!a.inv) return;
+  if (!a.inv.weapon) a.inv.weapon = { type: "bat", dur: ITEMS.bat.dur };
+  for (const t of ["spray2", "fire", "map"]) {
+    if (a.inv.pockets.includes(t) || t === "spray2" && a.inv.pockets.includes("spray")) continue;
+    const i = a.inv.pockets.indexOf(null);
+    if (i < 0) break;
+    a.inv.pockets[i] = t;
+  }
+}
+var espBox = null;
+var espEls = [];
+var espSprites = [];
+var v3 = new THREE4.Vector3();
+function updateESP(camera4, scene2) {
+  const on = cheatsAllowed() && G.mode === "play" && (ADM.esp || ADM.espItems);
+  if (!espBox) {
+    const hud = document.getElementById("hud");
+    if (!hud) return;
+    espBox = el("div", { id: "esp" });
+    hud.append(espBox);
+  }
+  let n = 0, si = 0;
+  if (on) {
+    const v = G.view || G.me;
+    const put = (x, y, z, text, cls, far) => {
+      v3.set(x, y, z).project(camera4);
+      if (v3.z > 1 || Math.abs(v3.x) > 1.1 || Math.abs(v3.y) > 1.1) return;
+      let e2 = espEls[n];
+      if (!e2) {
+        e2 = el("div", { class: "espl" });
+        espBox.append(e2);
+        espEls.push(e2);
+      }
+      e2.hidden = false;
+      if (e2.textContent !== text) e2.textContent = text;
+      e2.className = "espl " + cls + (far ? " far" : "");
+      e2.style.left = ((v3.x * 0.5 + 0.5) * 100).toFixed(2) + "%";
+      e2.style.top = ((-v3.y * 0.5 + 0.5) * 100).toFixed(2) + "%";
+      n++;
+    };
+    const glow = (x, y, z, color, size) => {
+      let s = espSprites[si];
+      if (!s) {
+        s = glowSprite(16777215, 1, 0.7, false, false);
+        s.renderOrder = 12;
+        scene2.add(s);
+        espSprites.push(s);
+      }
+      s.visible = true;
+      s.material.color.setHex(color);
+      s.scale.set(size, size * 1.7, 1);
+      s.position.set(x, y, z);
+      si++;
+    };
+    if (ADM.esp) {
+      for (const a of G.actors) {
+        if (a === v || a.state === "dead" || a.state === "escaped" || a.state === "sealed") continue;
+        const d = v ? Math.hypot(a.x - v.x, a.z - v.z) : 0;
+        const k = a.kind === "killer";
+        const tag2 = a.state === "hidden" ? "(かくれ中)" : a.state === "grabbed" ? "(つかまれ中)" : a.state === "vehicle" ? "(乗っている)" : k && a.stun ? "(ひるみ中)" : "";
+        glow(a.x, k ? 1.3 : 1, a.z, k ? 16722474 : 4247807, k ? 1.5 : 1.1);
+        put(a.x, k ? 2.8 : 2.1, a.z, `${k ? "カカシ男" : a.nick || a.name} ${Math.round(d)}m${tag2}`, k ? "k" : "s", d > 60);
+      }
+    }
+    if (ADM.espItems && v) {
+      const L3 = [];
+      for (const it of G.items) {
+        const d = Math.hypot(it.x - v.x, it.z - v.z);
+        if (d < 70) L3.push({ x: it.x, z: it.z, d, t: ITEMS[it.type].short || ITEMS[it.type].name, kind: ITEMS[it.type].kind });
+      }
+      for (const c of W.containers) {
+        if (c.searched || !c.items || !c.items.length) continue;
+        const d = Math.hypot(c.x - v.x, c.z - v.z);
+        if (d > 70) continue;
+        L3.push({ x: c.x, z: c.z, d, t: `${c.label}: ` + c.items.map((t) => ITEMS[t].short || ITEMS[t].name).join("・"), kind: c.items.some((t) => ITEMS[t].kind === "part") ? "part" : "pocket", box: true });
+      }
+      L3.sort((p, q) => p.d - q.d);
+      for (const o of L3.slice(0, 40)) put(o.x, o.box ? 1.3 : 0.6, o.z, o.t + ` ${Math.round(o.d)}m`, "it " + o.kind, o.d > 35);
+    }
+  }
+  for (let i = n; i < espEls.length; i++) espEls[i].hidden = true;
+  for (let i = si; i < espSprites.length; i++) espSprites[i].visible = false;
 }
 
 // src/ui.js
@@ -9693,9 +10098,10 @@ function showTitle() {
         "ul",
         { class: "k-list" },
         el("li", null, el("b", null, "霧渡り"), " 地図で選んだ場所へ一瞬で移動(すぐ使える)"),
-        el("li", null, el("b", null, "気配"), " こわがる学生と、学生のいる建物が赤く光る(0:45〜)"),
-        el("li", null, el("b", null, "影走り"), " 見えない影になって突進(2:15〜)"),
-        el("li", null, el("b", null, "忍び足"), " 足音とこわい音楽を消す(4:15〜)"),
+        el("li", null, el("b", null, "影走り"), ` 見えない影になって突進(${mmss(KILLER.unlock.dash)}〜・終わってから ${KILLER.cd.dash} 秒でまた使える)`),
+        el("li", null, el("b", null, "気配"), ` こわがる学生と、学生のいる建物が赤く光る(${mmss(KILLER.unlock.sense)}〜)`),
+        el("li", null, el("b", null, "忍び足"), ` 足音とこわい音楽を消す(${mmss(KILLER.unlock.stalk)}〜)`),
+        el("li", null, el("b", null, "飛びかかり"), ` こうげきボタン長押しで前に ${LUNGE.dist}m 飛ぶ。外すと ${LUNGE.miss} 秒たおれる`),
         el("li", null, el("b", null, "構え"), " 右クリックでガード。構えたままのこうげきは 1.75 倍")
       )),
       el(
@@ -9870,8 +10276,8 @@ function quickUI(force = false) {
 function equippedFor(charId) {
   return (PROF.eq[charId] || []).map((u) => PROF.owned.find((o) => o.u === u)).filter(Boolean).map((o) => ({ id: o.id, r: o.r }));
 }
-var KEYS_S = [["WASD", "歩く"], ["Shift", "走る(スタミナを使う)"], ["C", "しゃがむ(足音が出ない)"], ["E", "調べる・拾う・ドア・かくれる・乗る・窓"], ["走りながら E", "窓に飛びこむ(速いが、たおれて 2.56 秒動けない)"], ["R", "バリケード・窓をそっと開ける"], ["左クリック", "武器でなぐる"], ["右クリック(長押し)", "構え: こうげきが 1.75 倍、スペースで回避"], ["1 2 3", "ポケットの道具を使う"], ["F", "懐中電灯"], ["G", "部品を置く"], ["スペース", "修理のタイミング・つかまれたら連打"], ["Tab", "地図(地図を持っている時)"], ["Esc", "メニュー"]];
-var KEYS_K = [["WASD", "歩く"], ["左クリック", "鎌でこうげき(ドアや窓もこわす)"], ["右クリック(長押し)", "構え: ガード。構えたままのこうげきは 1.75 倍"], ["E", "つかむ・ドアを開ける・かくれ場所を調べる・投げ鎌を拾う"], ["スペース", "とどめ / ひるんだら連打で起きる"], ["Shift / 2", "影走り"], ["Q / 3", "気配"], ["X / 4", "忍び足"], ["1", "霧渡り(地図で場所を選ぶ)"], ["F", "投げ鎌"], ["R", "トラバサミを置く(外だけ)"], ["Tab", "地図"]];
+var KEYS_S = [["WASD", "歩く"], ["Shift", "走る(スタミナを使う)"], ["C", "しゃがむ(足音が出ない)"], ["E", `調べる・拾う・ドア・かくれる・乗る・窓(ふつうに乗りこえると約 ${VAULT.climb.toFixed(1)} 秒)`], ["走りながら E", `窓に飛びこむ(速いが、たおれて ${VAULT.getUp} 秒動けない。閉まった窓はケガ ${VAULT.glass})`], ["R", "バリケード・窓をそっと開ける"], ["左クリック", "武器でなぐる"], ["右クリック(長押し)", "構え: こうげきが 1.75 倍、スペースで回避"], ["1 2 3", "ポケットの道具を使う"], ["F", "懐中電灯"], ["G", "部品を置く"], ["スペース", "修理のタイミング・つかまれたら連打"], ["Tab", "地図(地図を持っている時)"], ["Esc", "メニュー"]];
+var KEYS_K = [["WASD", "歩く"], ["左クリック", "鎌でこうげき(ドアや窓もこわす)"], ["左クリック長押し", `前に ${LUNGE.dist}m 飛びかかってこうげき(外すと ${LUNGE.miss} 秒たおれる)`], ["右クリック(長押し)", "構え: ガード。構えたままのこうげきは 1.75 倍"], ["E", "つかむ・ドアを開ける・かくれ場所を調べる・投げ鎌を拾う"], ["スペース", "とどめ / ひるんだら連打で起きる"], ["Shift / 2", "影走り"], ["Q / 3", "気配"], ["X / 4", "忍び足"], ["1", "霧渡り(地図で場所を選ぶ)"], ["F", "投げ鎌"], ["R", "トラバサミを置く(外だけ)"], ["Tab", "地図"], ["F1", "管理者メニュー(管理者モードの時)"]];
 function showHelp(back) {
   modal(el(
     "div",
@@ -9894,7 +10300,9 @@ function showHelp(back) {
           el("li", null, el("b", null, "封印"), " 武器でダメージを入れて仮面をはがし、構えた強こうげきなどの「スタン特大」で地面にたおす。たおれている間にカカシ小屋のお札を貼る"),
           el("li", null, el("b", null, "無線"), " 無線小屋で呼ぶと、2人がやられた(逃げた)後に猟師のゲンが来る。やられた人がゲンになれる")
         ),
-        el("p", { class: "tip" }, "部品は1つしか持てない。カカシ男は窓を通れない。湖は泳いで渡れる。こわさが上がると気配で見つかりやすく、つまずきやすい。地図は「地図」を拾うと見られる。"),
+        el("p", { class: "tip" }, "部品は1つしか持てない。カカシ男は窓を通れない。湖は泳いで渡れる。地図は「地図」を拾うと見られる。"),
+        el("h3", null, "こわさ"),
+        el("p", null, `カカシ男が見えたり、ケガをさせられたりすると上がる。冷静さが高い学生ほど上がりにくく、早く落ち着く。${FEAR.lv[1]} 以上(こわい)でスタミナが戻りにくく走るとつまずき、${FEAR.lv[2]} 以上(パニック)は修理のタイミングもむずかしくなる。気配にも映りやすい。`),
         el("h3", null, "学生のキー"),
         keyTable(KEYS_S)
       ),
@@ -9946,12 +10354,24 @@ function showSettings(back) {
     range("s-vol", "音の大きさ", 0, 1, 0.05, "vol", () => bus.emit("volume")),
     range("s-mus", "音楽の大きさ", 0, 1, 0.05, "music", () => bus.emit("volume")),
     q,
+    adminSection(() => showSettings(back), G.mode === "play" ? null : () => showPerks(() => showSettings(back))),
     el("div", { class: "m-btns" }, el("button", { class: "btn primary", onclick: () => {
       closeModal();
       if (back) back();
+      else if (G.mode === "title") showTitle();
     } }, "とじる"))
   ));
 }
+function showAdmin(onClose) {
+  unlock();
+  const close = () => {
+    closeModal();
+    onClose();
+  };
+  modal(adminMenu(close));
+  U.modal.dataset.admin = "1";
+}
+var adminOpen = () => !U.modal.hidden && U.modal.dataset.admin === "1";
 function showPause(onResume, onQuit) {
   unlock();
   modal(el(
@@ -9976,6 +10396,7 @@ function showPause(onResume, onQuit) {
 }
 function modal(node, keep = false) {
   U.modal.innerHTML = "";
+  delete U.modal.dataset.admin;
   U.modal.append(node);
   U.modal.hidden = false;
   IN.uiOpen = true;
@@ -10126,6 +10547,7 @@ function buildTouch() {
   box2.append(el("div", { id: "joy" }, el("div", { id: "joy-knob" })));
   for (const [a, label, cls] of G.role === "killer" ? TB_K : TB_S) {
     const b = el("button", { class: "tb " + cls, "data-a": a }, el("span", null, label));
+    const hold = a === "attack" && G.role === "killer";
     b.addEventListener("pointerdown", (e2) => {
       e2.preventDefault();
       e2.stopPropagation();
@@ -10139,9 +10561,39 @@ function buildTouch() {
         b.classList.toggle("on", IN.touchRun);
         return;
       }
+      if (hold) {
+        try {
+          b.setPointerCapture(e2.pointerId);
+        } catch (err) {
+        }
+        b.classList.add("on");
+        bus.emit("atkDown");
+        return;
+      }
       bus.emit("press", a);
     });
+    if (hold) {
+      b.addEventListener("pointerup", (e2) => {
+        e2.preventDefault();
+        b.classList.remove("on");
+        bus.emit("atkUp");
+      });
+      b.addEventListener("pointercancel", () => {
+        b.classList.remove("on");
+        bus.emit("atkCancel");
+      });
+      b.append(el("small", null, "長押し:飛ぶ"));
+    }
     box2.append(b);
+  }
+  if (SET.admin) {
+    const ab = el("button", { class: "tb top t3", "data-a": "admin" }, el("span", null, "管"));
+    ab.addEventListener("pointerdown", (e2) => {
+      e2.preventDefault();
+      e2.stopPropagation();
+      bus.emit("press", "admin");
+    });
+    box2.append(ab);
   }
   const mash = el("button", { class: "tb mashbtn", "data-a": "mash" }, el("span", null, "連打！"));
   mash.addEventListener("pointerdown", (e2) => {
@@ -10194,7 +10646,7 @@ function updateTouch() {
     for (const [a, key] of [["shift", "dash"], ["q", "sense"], ["x", "stalk"], ["s1", "morph"]]) {
       const b = box2.querySelector(`[data-a="${a}"]`);
       if (!b) continue;
-      const lock2 = Math.max(0, KILLER.unlock[key] - G.t), cd = me.cd[key] || 0;
+      const lock2 = lockLeft(key), cd = me.cd[key] || 0;
       b.classList.toggle("dim", lock2 > 0 || cd > 0);
       b.dataset.cd = lock2 > 0 ? mmss(lock2) : cd > 0 ? Math.ceil(cd) + "" : "";
     }
@@ -10224,8 +10676,23 @@ function updateHUD(dt) {
   if (slow) hudT = 0.1;
   const v = G.view;
   const fear = v && v.kind !== "killer" && v.state !== "dead" ? v.fear : 0;
-  U.vign.style.opacity = G.role === "killer" ? G.rage ? 0.45 : 0.25 : clamp((fear - 25) / 75, 0, 1) * 0.9;
+  const flv = fearLevel(fear);
+  U.vign.style.opacity = G.role === "killer" ? G.rage ? 0.45 : 0.25 : clamp((fear - 20) / 70, 0, 1) * 0.95;
   U.vign.classList.toggle("rage", G.role === "killer" && G.rage);
+  U.vign.classList.toggle("beat", G.role !== "killer" && flv >= 2);
+  U.vign.classList.toggle("panic", G.role !== "killer" && flv >= 3);
+  if (v && v.kind !== "killer") {
+    if (fearPrev.who !== v) {
+      fearPrev.who = v;
+      fearPrev.f = fear;
+    }
+    if (fear - fearPrev.f > 2.5) {
+      fearPrev.until = performance.now() + 900;
+      if (v === G.me && fear - fearPrev.f > 6) sfx("fearUp");
+    }
+    fearPrev.f = fear;
+    U.h_me.classList.toggle("fearup", performance.now() < fearPrev.until);
+  }
   updateTouch();
   const c = me && me.state !== "dead" && G.me === G.view ? getChoice() : null;
   if (c && !G.touch) {
@@ -10244,7 +10711,7 @@ function updateHUD(dt) {
     U.prompt.hidden = true;
     U.prompt.dataset.k = "";
   }
-  U.stancehint.hidden = !(me && me.stance && me.state === "ok");
+  U.stancehint.hidden = !(me && me.stance && me.state === "ok" && !me.lunge && !(me.missT > 0));
   if (!U.stancehint.hidden) U.stancehint.textContent = me.kind === "killer" ? "構え(ガード中): こうげきは 1.75 倍" : "構え: こうげきは 1.75 倍 ・ スペースで回避";
   const ac = me && me.act;
   if (ac && ac.type !== "hide") {
@@ -10303,7 +10770,7 @@ function updateHUD(dt) {
   }
   if (G.role === "student" && me && me.inv) {
     const wpn = me.inv.weapon;
-    const sig2 = [me.name, Math.round(me.hp), Math.round(me.stam / 5), Math.round(me.fear / 5), me.flash, me.crouch, me.exhausted, me.swim, wpn && wpn.type, wpn && Math.ceil(wpn.dur), wpn && wpn.ammo, me.inv.part, me.inv.pockets.join(), me.state].join();
+    const sig2 = [me.name, Math.round(me.hp), Math.round(me.stam / 5), Math.round(me.fear / 5), fearLevel(me.fear), me.flash, me.crouch, me.exhausted, me.swim, wpn && wpn.type, wpn && Math.ceil(wpn.dur), wpn && wpn.ammo, me.inv.part, me.inv.pockets.join(), me.state].join();
     if (U.h_me.dataset.k !== sig2) {
       U.h_me.dataset.k = sig2;
       U.h_me.innerHTML = "";
@@ -10311,7 +10778,7 @@ function updateHUD(dt) {
         el("div", { class: "me-n" }, el("b", null, me.name), el("span", null, me.def.tag), me.hero ? el("span", { class: "tagx" }, "助っ人") : null),
         bar("体力", me.hp, me.hp < 40 ? "low" : "hp"),
         bar(me.exhausted ? "息切れ" : "スタミナ", me.stam / (me.stamMax || 100) * 100, "st"),
-        bar("こわさ", me.fear, "fear"),
+        bar("こわさ", me.fear, "fear lv" + fearLevel(me.fear), FEAR.names[fearLevel(me.fear)]),
         el("div", { class: "me-s" }, me.flash ? "ライト ON" : "ライト OFF", me.crouch ? " / しゃがみ" : "", me.swim ? " / 泳いでいる" : "", me.state === "hidden" ? " / かくれ中" : "")
       );
       U.h_inv.innerHTML = "";
@@ -10325,7 +10792,7 @@ function updateHUD(dt) {
   }
   if (G.role === "killer" && k && k === me) {
     const ab = (key, name, id, max, active) => {
-      const lock2 = Math.max(0, KILLER.unlock[id] - G.t), cd = k.cd[id] || 0;
+      const lock2 = lockLeft(id), cd = k.cd[id] || 0;
       return el(
         "div",
         { class: "ab" + (active ? " act" : "") + (cd > 0 || lock2 > 0 ? " cd" : "") },
@@ -10348,7 +10815,7 @@ function updateHUD(dt) {
           ab("Q", "気配", "sense", KILLER.cd.sense, k.senseT > 0),
           ab("X", "忍び足", "stalk", KILLER.cd.stalk, k.stalkT > 0)
         ),
-        el("div", { class: "kc" }, el("span", null, el("kbd", null, "F"), "投げ鎌 ", el("b", null, k.sickles)), el("span", null, el("kbd", null, "R"), "トラバサミ ", el("b", null, k.traps)), el("span", null, "ダメージ ", el("b", null, Math.round(k.dmg || 0)), k.maskOff ? "(仮面なし)" : ""))
+        el("div", { class: "kc" }, el("span", null, el("kbd", null, "F"), "投げ鎌 ", el("b", null, k.sickles)), el("span", null, el("kbd", null, "R"), "トラバサミ ", el("b", null, k.traps)), el("span", null, "ダメージ ", el("b", null, Math.round(k.dmg || 0)), k.maskOff ? "(仮面なし)" : ""), G.touch ? null : el("span", null, el("kbd", null, "長押し"), "飛びかかり"))
       );
     }
   }
@@ -10363,7 +10830,9 @@ function setSkillGetter(f) {
   getSkill = f;
 }
 var ACT_LABEL = { search: "さがしている…", install: "取りつけ中…", phone: "電話している…", radio: "無線で呼んでいる…", heal: "治療中…", barr: "バリケード中…", unbarr: "バリケードを外している…", window: "窓を動かしている…", disarm: "トラバサミを外している…", seal: "お札を貼っている…" };
-var bar = (label, v, cls) => el("div", { class: "bar " + cls }, el("span", null, label), el("i", null, el("b", { style: { width: pct(v) } })));
+var bar = (label, v, cls, tag2) => el("div", { class: "bar " + cls + (tag2 ? " tagged" : "") }, el("span", null, label), el("i", null, el("b", { style: { width: pct(v) } })), tag2 ? el("em", null, tag2) : null);
+var fearPrev = { who: null, f: 0, until: 0 };
+var lockLeft = (id) => G.killer && G.killer.noCd ? 0 : Math.max(0, KILLER.unlock[id] - G.t);
 function drawSkill(c) {
   U.skill.hidden = !c;
   if (!c) return;
@@ -10391,15 +10860,15 @@ function drawSkill(c) {
   g.fillText(G.touch ? "タップ!" : "スペース!", S / 2, S / 2 + 5);
 }
 var pingEls = [];
-var v3 = new THREE4.Vector3();
+var v32 = new THREE5.Vector3();
 function updatePings() {
   const k = G.killer;
   let n = 0;
   if (k && k === G.me && k.state === "ok") {
     const list = G.net === "client" ? (G.netNoises || []).map(([x, z, , age]) => ({ x, z, age })) : G.noises.filter((p) => G.t - p.t < 2.2 && p.src && p.src.kind !== "killer" && Math.hypot(p.x - k.x, p.z - k.z) < p.r * 1.2).map((p) => ({ x: p.x, z: p.z, age: G.t - p.t }));
     for (const p of list) {
-      v3.set(p.x, 1, p.z).project(camera);
-      if (v3.z > 1) continue;
+      v32.set(p.x, 1, p.z).project(camera);
+      if (v32.z > 1) continue;
       let e2 = pingEls[n];
       if (!e2) {
         e2 = el("i", { class: "ping" });
@@ -10407,8 +10876,8 @@ function updatePings() {
         pingEls.push(e2);
       }
       e2.hidden = false;
-      e2.style.left = clamp((v3.x * 0.5 + 0.5) * 100, 2, 98) + "%";
-      e2.style.top = clamp((-v3.y * 0.5 + 0.5) * 100, 4, 96) + "%";
+      e2.style.left = clamp((v32.x * 0.5 + 0.5) * 100, 2, 98) + "%";
+      e2.style.top = clamp((-v32.y * 0.5 + 0.5) * 100, 4, 96) + "%";
       e2.style.opacity = 1 - p.age / 2.2;
       if (++n >= 12) break;
     }
@@ -10485,7 +10954,7 @@ function setupObjectives(scene2) {
     scene2.add(v.mesh);
   }
   for (const v of [car, truck]) {
-    const hl = new THREE5.SpotLight(16773328, 0, 45, 0.5, 0.5, 1);
+    const hl = new THREE6.SpotLight(16773328, 0, 45, 0.5, 0.5, 1);
     hl.position.set(0, 0.9, 2.2);
     hl.target.position.set(0, 0, 14);
     v.mesh.add(hl, hl.target);
@@ -10495,7 +10964,7 @@ function setupObjectives(scene2) {
   const pc = makePoliceCar();
   pc.visible = false;
   scene2.add(pc);
-  const pl = new THREE5.PointLight(16719904, 0, 30, 1);
+  const pl = new THREE6.PointLight(16719904, 0, 30, 1);
   pl.position.y = 2.5;
   scene2.add(pl);
   G.phone = { fuse: false, called: false, eta: 0, arrived: false, exit: null, zone: null, mesh: pc, light: pl };
@@ -10565,7 +11034,7 @@ function installPart(a, obj) {
       G.phone.fuse = true;
       const lamp = W.sp.fusebox.mesh.userData.lamp;
       W.sp.fusebox.mesh.userData.lampOff = lamp.material;
-      lamp.material = new THREE5.MeshLambertMaterial({ color: 4259680, emissive: 2146368 });
+      lamp.material = new THREE6.MeshLambertMaterial({ color: 4259680, emissive: 2146368 });
       sayAll(`${a.name}が配電盤にヒューズをつけた。管理棟の電話が使える！`, "good");
     } else {
       if (obj.parts[type] !== false) return;
@@ -10977,9 +11446,9 @@ function spawnItem(type, x, z, extra = {}, id) {
     mesh.rotation.y = Math.random() * 3;
     mesh.position.y = 0.05;
   }
-  const glow = glowSprite(new THREE6.Color(def.color).getHex(), def.kind === "weapon" ? 0.9 : 0.75, 0.5);
+  const glow = glowSprite(new THREE7.Color(def.color).getHex(), def.kind === "weapon" ? 0.9 : 0.75, 0.5);
   glow.position.y = 0.22;
-  const g = new THREE6.Group();
+  const g = new THREE7.Group();
   g.add(mesh, glow);
   g.position.set(x, 0.03, z);
   G.scene.add(g);
@@ -11391,10 +11860,13 @@ function emitNoise(x, z, r, kind, src) {
   G.noises.push({ x, z, r, kind, src, t: G.t });
   if (G.noises.length > 80) G.noises.splice(0, G.noises.length - 80);
 }
+var SHOCK = { swing: FEAR.hit, sickle: FEAR.sickle, trap: FEAR.trap };
 function damage(s, amt, why) {
   if (!alive(s) || s.kind === "killer") return;
+  if (s.god) return;
   amt *= Math.max(0.2, 1 + pm(s, "dmgTaken") / 100);
   s.hp -= amt;
+  if (SHOCK[why]) addShock(s, SHOCK[why] * (why === "swing" ? Math.min(1.4, amt / KILLER.swing) : 1));
   sfxAt("hurt", s.x, s.z, 30);
   emitNoise(s.x, s.z, 20, "scream", s);
   if (s.act) cancelAct(s);
@@ -11446,7 +11918,7 @@ function dropEverything(s) {
   s.inv.pockets = [null, null, null];
 }
 function killerSwing(k, heavy = false) {
-  if (k.atk || k.stun || k.getUp > 0 || k.grab || k.morphT > 0 || k.searchT > 0 || k.state !== "ok") return false;
+  if (k.atk || k.lunge || k.missT > 0 || k.stun || k.getUp > 0 || k.grab || k.morphT > 0 || k.searchT > 0 || k.state !== "ok") return false;
   heavy = heavy || k.stance;
   k.atk = heavy ? { t: 0, dur: 0.95, hit: 0.5, done: false, lock: true, heavy: true } : { t: 0, dur: 0.62, hit: 0.27, done: false, lock: true };
   k.dashT = 0;
@@ -11486,6 +11958,83 @@ function killerHit(k) {
   const w = windowInFront(k, 1.9);
   if (w && w.state !== "broken") breakWindow(w);
 }
+function killerLunge(k, heavy = false) {
+  if (k.state !== "ok" || k.atk || k.lunge || k.missT > 0 || k.stun || k.getUp > 0 || k.grab || k.killT != null || k.morphT > 0 || k.searchT > 0 || k.throwT > 0 || k.swim) return false;
+  heavy = heavy || k.stance;
+  k.dashT = 0;
+  k.path = null;
+  const sp = LUNGE.dist / LUNGE.dur;
+  k.lunge = { t: 0, dur: LUNGE.dur, vx: Math.sin(k.rot) * sp, vz: Math.cos(k.rot) * sp, heavy };
+  sfxAt("lunge", k.x, k.z, 28);
+  return true;
+}
+function updateLunge(k, dt) {
+  const L3 = k.lunge;
+  if (!L3) return;
+  if (k.state !== "ok" || k.stun || k.grab) {
+    k.lunge = null;
+    return;
+  }
+  L3.t += dt;
+  const p = { x: k.x + L3.vx * dt, z: k.z + L3.vz * dt };
+  collide(p, k.r);
+  const moved = Math.hypot(p.x - k.x, p.z - k.z);
+  k.x = p.x;
+  k.z = p.z;
+  k.vx = L3.vx;
+  k.vz = L3.vz;
+  k.spd = moved / Math.max(dt, 1e-4);
+  const s = lungeTarget(k);
+  if (s) {
+    endLunge(k, s);
+    return;
+  }
+  const want = Math.hypot(L3.vx, L3.vz) * dt;
+  if (L3.t >= L3.dur || L3.t > 0.08 && moved < want * 0.3) endLunge(k, null);
+}
+function lungeTarget(k) {
+  let best = null, bd = 1e9;
+  for (const s of G.students) {
+    if (s.state !== "ok" || s.vault || s.dodge) continue;
+    const d = dist(k, s);
+    if (d > LUNGE.reach || Math.abs(angDiff(k.rot, angTo(k, s))) > 1) continue;
+    if (d < bd) {
+      bd = d;
+      best = s;
+    }
+  }
+  return best;
+}
+function endLunge(k, s) {
+  const heavy = k.lunge && k.lunge.heavy;
+  k.lunge = null;
+  k.vx = k.vz = 0;
+  k.atk = heavy ? { t: 0.5, dur: 0.95, hit: 0.5, done: true, lock: true, heavy: true } : { t: 0.27, dur: 0.62, hit: 0.27, done: true, lock: true };
+  if (s) {
+    sfxAt("hit", s.x, s.z, 30);
+    damage(s, KILLER.swing * (heavy ? STANCE.heavy : 1), "swing");
+    if (alive(s) && s.state === "ok") {
+      const p = snapFree(s.x + Math.sin(k.rot) * 0.6, s.z + Math.cos(k.rot) * 0.6, s.r, 2);
+      place(s, p.x, p.z);
+    }
+    return;
+  }
+  const d = doorInFront(k, 1.7);
+  if (d) {
+    hitDoor(d, heavy ? 2 : 1);
+    return;
+  }
+  const w = windowInFront(k, 1.6);
+  if (w && w.state !== "broken") {
+    breakWindow(w);
+    return;
+  }
+  k.atk = null;
+  k.missT = LUNGE.miss;
+  sfxAt("thud", k.x, k.z, 24);
+  tell(k, "飛びかかりを外した！", "warn");
+}
+var guarding = (k) => !!(k && k.stance && !k.lunge && !(k.missT > 0) && !k.stun && !k.atk);
 function doorInFront(a, range) {
   let best = null, bd = 1e9;
   for (const d of doors) {
@@ -11569,7 +12118,7 @@ function studentHit(s) {
   if (!w) return;
   const def = ITEMS[w.type];
   wearWeapon(s, w, def);
-  if (k.stance && Math.abs(angDiff(k.rot, angTo(k, s))) < 1.3) {
+  if (guarding(k) && Math.abs(angDiff(k.rot, angTo(k, s))) < 1.3) {
     sfxAt("block", k.x, k.z, 30);
     tell(s, "ガードされた！", "warn");
     return;
@@ -11674,6 +12223,8 @@ function stunKiller(k, presses, src, opt = {}) {
   k.stun = { left: need, need, t: 0, down: canDown };
   k.stunT = 1;
   k.atk = null;
+  k.lunge = null;
+  k.missT = 0;
   k.dashT = 0;
   k.throwT = 0;
   k.searchT = 0;
@@ -11706,6 +12257,7 @@ function updateKillerStun(k, dt) {
   }
 }
 function grab(k, s) {
+  if (s.god) return false;
   if (s.act) cancelAct(s);
   if (s.trapped) s.trapped = null;
   if (s.hideSpot) {
@@ -11827,11 +12379,11 @@ function flashAt(x, y, z, color, size, life, net = true) {
   G.fx.push({ kind: "flash", t: life, life, mesh: s, x, y, z, color, size });
   if (net && NETH.toAll) NETH.toAll({ e: "flash", x, y, z, c: color, s: size, l: life });
 }
-var blockedBy = (k, x, z) => k.stance && Math.abs(angDiff(k.rot, Math.atan2(x - k.x, z - k.z))) < 1.3;
-var unlockLeft = (key) => Math.max(0, KILLER.unlock[key] - G.t);
+var blockedBy = (k, x, z) => guarding(k) && Math.abs(angDiff(k.rot, Math.atan2(x - k.x, z - k.z))) < 1.3;
+var unlockLeft = (key) => G.killer && G.killer.noCd ? 0 : Math.max(0, KILLER.unlock[key] - G.t);
 var cdMul = (k) => k.ctrl === "ai" ? DIFF[G.diff].cd : 1;
 function ready2(k, key) {
-  if (k.state !== "ok" || k.stun || k.getUp > 0) return false;
+  if (k.state !== "ok" || k.stun || k.getUp > 0 || k.lunge || k.missT > 0) return false;
   const u = unlockLeft(key);
   if (u > 0) {
     tell(k, `まだ使えない(あと ${Math.ceil(u)} 秒で使えるようになる)`, "dim");
@@ -11988,7 +12540,7 @@ function updateCombat(dt) {
   for (const t of G.traps) {
     if (!t.armed) continue;
     if (t.own === "s") {
-      if (k && k.state === "ok" && !k.stun && !(k.dashT > 0) && (k.x - t.x) ** 2 + (k.z - t.z) ** 2 < 0.55 * 0.55) {
+      if (k && k.state === "ok" && !k.stun && !(k.dashT > 0) && !k.lunge && (k.x - t.x) ** 2 + (k.z - t.z) ** 2 < 0.55 * 0.55) {
         if (k.stance) continue;
         t.armed = false;
         t.mesh.scale.set(0.8, 1.6, 0.8);
@@ -12000,7 +12552,7 @@ function updateCombat(dt) {
       continue;
     }
     for (const s of G.students) {
-      if (s.state !== "ok" || s.vault || s.trapped || s.dodge) continue;
+      if (s.state !== "ok" || s.vault || s.trapped || s.dodge || s.god) continue;
       if ((s.x - t.x) ** 2 + (s.z - t.z) ** 2 > 0.45 * 0.45) continue;
       t.armed = false;
       t.mesh.scale.set(0.8, 1.6, 0.8);
@@ -12160,6 +12712,9 @@ function baseActor(kind, def, x, z, ctrl, rig) {
     hp: 100,
     stam: 100,
     fear: 10,
+    shock: 0,
+    fearLv: 0,
+    fearMsgT: -99,
     flash: false,
     knifeT: null,
     score: 0,
@@ -12229,7 +12784,9 @@ function makeKillerActor(x, z, ctrl) {
     traps: KILLER.traps,
     dmg: 0,
     maskOff: false,
-    stanceT: 0
+    stanceT: 0,
+    lunge: null,
+    missT: 0
   });
   return a;
 }
@@ -12237,6 +12794,11 @@ var alive = (a) => a && a.state !== "dead" && a.state !== "escaped" && a.state !
 var pocketIndex = (a, type) => a.inv ? a.inv.pockets.findIndex((p) => p === type || type === "spray" && p === "spray2") : -1;
 var hasPocket = (a, type) => pocketIndex(a, type) >= 0;
 var pm = (a, k) => a && a.pm && a.pm[k] || 0;
+var fearMul = (a) => !a || a.kind === "killer" ? 1 : a.fear >= FEAR.lv[2] ? 0.7 : a.fear >= FEAR.lv[1] ? 0.85 : 1;
+function addShock(a, amt) {
+  if (!a || a.kind === "killer") return;
+  a.shock = Math.min(70, (a.shock || 0) + amt * fearGain(a.st) * Math.max(0.1, 1 + pm(a, "fear") / 100));
+}
 function place(a, x, z) {
   a.x = x;
   a.z = z;
@@ -12246,7 +12808,7 @@ function place(a, x, z) {
 function busy(a) {
   if (a.state !== "ok") return true;
   if (a.vault || a.down || a.trip > 0 || a.trapped || a.dodge || a.act && !a.act.move) return true;
-  if (a.kind === "killer") return !!(a.stun || a.getUp > 0 || a.atk && a.atk.lock || a.killT != null || a.morphT > 0 || a.searchT > 0 || a.throwT > 0 || a.grab);
+  if (a.kind === "killer") return !!(a.stun || a.getUp > 0 || a.atk && a.atk.lock || a.lunge || a.missT > 0 || a.killT != null || a.morphT > 0 || a.searchT > 0 || a.throwT > 0 || a.grab);
   return false;
 }
 function startAct(a, type, dur, o = {}) {
@@ -12290,11 +12852,11 @@ function tickAct(a, dt) {
     ac.marks.shift();
     if (a.ctrl === "player") bus.emit("skill", a);
     else if (a.ctrl === "remote") {
-      const z0 = 0.3 + Math.random() * 0.5, zone = 0.09 + (a.st.repair || 5) * 0.012, speed = 0.8 + Math.random() * 0.25;
+      const z0 = 0.3 + Math.random() * 0.5, zone = (0.09 + (a.st.repair || 5) * 0.012) * fearMul(a), speed = 0.8 + Math.random() * 0.25;
       ac.check = { remote: true, t0: G.t, z0, z1: z0 + zone, speed };
       tellEv(a, { e: "skill", z0, z1: z0 + zone, speed });
     } else {
-      const ok = Math.random() < (0.5 + (a.st.repair || 5) * 0.045) * (a.ai.skill || 1);
+      const ok = Math.random() < (0.5 + (a.st.repair || 5) * 0.045) * (a.ai.skill || 1) * (0.4 + 0.6 * fearMul(a));
       if (!ok) {
         ac.t = Math.max(0, ac.t - ac.dur * 0.25);
         emitNoise(a.x, a.z, 32, "fail", a);
@@ -12437,7 +12999,19 @@ function updateActor(a, dt) {
     return;
   }
   if (a.slowT > 0) a.slowT -= dt;
-  if (a.kind === "killer") killerTimers(a, dt);
+  if (a.kind === "killer") {
+    killerTimers(a, dt);
+    if (a.lunge && a.state === "ok") {
+      updateLunge(a, dt);
+      footsteps(a, dt);
+      return;
+    }
+    if (a.missT > 0) {
+      a.spd = 0;
+      a.vx = a.vz = 0;
+      return;
+    }
+  }
   if (a.state === "hidden" || a.state === "grabbed" || a.state === "vehicle") {
     a.vx = a.vz = 0;
     a.spd = 0;
@@ -12554,6 +13128,7 @@ function killerTimers(k, dt) {
   if (k.stalkT > 0) k.stalkT -= dt * (k.spd > 0.3 ? 1 : 0.1);
   if (k.throwT > 0) k.throwT -= dt;
   if (k.throwCd > 0) k.throwCd -= dt;
+  if (k.missT > 0) k.missT -= dt;
   if (k.stanceT > 0) {
     k.stanceT -= dt;
     if (k.stanceT <= 0 && k.ctrl === "ai") k.stance = false;
@@ -12575,11 +13150,16 @@ function killerTimers(k, dt) {
     }
   }
   const cdm = G.rage ? KILLER.rageCd : 1;
-  for (const key in k.cd) if (k.cd[key] > 0) k.cd[key] -= dt / cdm;
+  for (const key in k.cd) if (k.cd[key] > 0 && !(key === "dash" && k.dashT > 0)) k.cd[key] -= dt / cdm;
+  if (k.noCd) for (const key in k.cd) k.cd[key] = 0;
 }
 function studentStats(a, dt, moving) {
   const max = a.stamMax || 100;
-  if (a.sprinting) {
+  const lv = fearLevel(a.fear);
+  if (a.infStam) {
+    a.stam = max;
+    a.exhausted = false;
+  } else if (a.sprinting) {
     a.stam -= staminaDrain(a.st) * dt;
     if (a.stam <= 0) {
       a.stam = 0;
@@ -12589,7 +13169,7 @@ function studentStats(a, dt, moving) {
   } else if (a.swim) {
     a.stam = Math.max(0, a.stam - 2 * dt);
   } else {
-    let r = staminaRegen(a.st) * (1 + pm(a, "regen") / 100) * (a.hp < 40 ? 0.6 : 1) * (a.fear > 70 ? 0.75 : 1) * (moving ? 0.7 : 1);
+    let r = staminaRegen(a.st) * (1 + pm(a, "regen") / 100) * (a.hp < 40 ? 0.6 : 1) * (lv >= 3 ? 0.55 : lv >= 2 ? 0.75 : 1) * (moving ? 0.7 : 1);
     if (!moving || a.crouch) r *= 1 + pm(a, "regenStill") / 100;
     a.stam = Math.min(max, a.stam + r * dt);
     if (a.exhausted && a.stam > 30) a.exhausted = false;
@@ -12599,10 +13179,21 @@ function studentStats(a, dt, moving) {
     a.fearT = 0.25;
     a.fearGoal = fearTarget(a);
   }
-  const goal = a.fearGoal == null ? 10 : a.fearGoal;
-  if (goal > a.fear) a.fear = Math.min(goal, a.fear + ((goal - a.fear) * 0.8 * fearGain(a.st) * (1 + pm(a, "fear") / 100) + 3) * dt);
-  else a.fear = Math.max(goal, a.fear - 3.5 * dt);
-  if (a.sprinting && a.fear > 72 && Math.random() < dt * 0.07 * ((a.fear - 72) / 28) * (1.25 - a.st.luck * 0.06) * (1 + pm(a, "stumble") / 100)) {
+  const fg = fearGain(a.st) * Math.max(0.1, 1 + pm(a, "fear") / 100);
+  if (a.kNear) a.shock = Math.min(70, (a.shock || 0) + FEAR.chase * fg * dt);
+  if (a.shock > 0) a.shock = Math.max(0, a.shock - shockFade(a.st) * dt);
+  const goal = clamp((a.fearGoal == null ? 10 : a.fearGoal) + (a.shock || 0), 0, 100);
+  if (goal > a.fear) a.fear = Math.min(goal, a.fear + ((goal - a.fear) * 0.8 * fg + 3) * FEAR.rise * dt);
+  else a.fear = Math.max(goal, a.fear - fearRelax(a.st) * dt);
+  const nlv = fearLevel(a.fear);
+  if (nlv !== a.fearLv) {
+    if (nlv > a.fearLv && nlv >= 2 && G.t - a.fearMsgT > 8) {
+      a.fearMsgT = G.t;
+      tell(a, nlv === 3 ? "パニック！ 手がふるえて修理しにくい・走るとつまずく・スタミナが戻りにくい" : "こわい… スタミナが戻りにくく、走るとつまずきやすい", "warn");
+    }
+    a.fearLv = nlv;
+  }
+  if (a.sprinting && a.fear > FEAR.lv[1] && Math.random() < dt * 0.07 * ((a.fear - FEAR.lv[1]) / (100 - FEAR.lv[1])) * (1.25 - a.st.luck * 0.06) * (1 + pm(a, "stumble") / 100)) {
     a.trip = 1.1;
     a.vx *= 0.2;
     a.vz *= 0.2;
@@ -12620,12 +13211,15 @@ function fearTarget(a) {
   if (a.hp < 40) f += 12;
   if (a.trapped) f += 30;
   if (a.swim) f += 6;
-  if (k && alive(k)) {
+  a.kNear = false;
+  if (k && alive(k) && k.state === "ok") {
     const d = dist(a, k);
     if (d < 32) {
       const look = a.state === "hidden" || d < 6 || Math.abs(angDiff(a.rot, angTo(a, k))) < 1.7;
-      if (look && sightClear(a.x, a.z, k.x, k.z) && !(k.dashT > 0)) f += 58 * (1 - d / 34);
-      else if (!(k.stalkT > 0) && d < 20) f += 30 * (1 - d / 20);
+      if (look && sightClear(a.x, a.z, k.x, k.z) && !(k.dashT > 0)) {
+        f += 58 * (1 - d / 34);
+        if (d < 12) a.kNear = true;
+      } else if (!(k.stalkT > 0) && d < 20) f += 30 * (1 - d / 20);
     }
   }
   let friends = 0;
@@ -12720,7 +13314,7 @@ function syncRig(a, dt) {
 }
 var _ghost = null;
 function ghostMat() {
-  if (!_ghost) _ghost = new THREE7.MeshBasicMaterial({ color: 197379, transparent: true, opacity: 0.16, depthWrite: false });
+  if (!_ghost) _ghost = new THREE8.MeshBasicMaterial({ color: 197379, transparent: true, opacity: 0.16, depthWrite: false });
   return _ghost;
 }
 function rememberMaterials(rig) {
@@ -12737,11 +13331,11 @@ var canSee = (a, b, range, fov = 1.3) => {
 };
 
 // src/player.js
-import * as THREE8 from "three";
+import * as THREE9 from "three";
 var CAM = { yaw: Math.PI, pitch: 0.3, shake: 0, aimY: 0 };
-var PL = { choice: null, mapOpen: false, morph: false, spect: 0, ff: false, skill: null };
+var PL = { choice: null, mapOpen: false, morph: false, spect: 0, ff: false, skill: null, hold: null };
 var camera2 = null;
-var tmp = new THREE8.Vector3();
+var tmp = new THREE9.Vector3();
 function initPlayer(cam) {
   camera2 = cam;
   bus.on("press", onPress);
@@ -12749,7 +13343,7 @@ function initPlayer(cam) {
     if (a !== G.me || !a.act) return;
     const z0 = 0.3 + Math.random() * 0.5;
     a.act.check = { local: true };
-    PL.skill = { needle: 0, speed: 0.8 + Math.random() * 0.25, z0, z1: z0 + repairZone(a.st) };
+    PL.skill = { needle: 0, speed: 0.8 + Math.random() * 0.25, z0, z1: z0 + repairZone(a.st) * fearMul(a) };
     sfx("tick");
   });
   bus.on("skillUI", (ev) => {
@@ -12765,7 +13359,20 @@ function initPlayer(cam) {
   bus.on("mapState", (o) => {
     PL.mapOpen = o;
   });
+  bus.on("atkDown", () => {
+    PL.hold = killerInput() ? { t: 0, fired: false } : null;
+  });
+  bus.on("atkUp", () => {
+    const h = PL.hold;
+    PL.hold = null;
+    if (!h || h.fired || !killerInput()) return;
+    sendCmd({ k: "atk", yaw: CAM.yaw, heavy: stanceHeld() });
+  });
+  bus.on("atkCancel", () => {
+    PL.hold = null;
+  });
 }
+var killerInput = () => G.mode === "play" && !G.paused && !PL.mapOpen && !IN.uiOpen && G.me && G.me.kind === "killer" && alive(G.me);
 function sendCmd(c) {
   if (G.net === "client") NET.cmd(c);
   else doCmd(G.me, c);
@@ -12805,8 +13412,8 @@ function onPress(a) {
   if (me.kind === "killer") {
     switch (a) {
       case "attack":
-        sendCmd({ k: "atk", yaw, heavy: stanceHeld() });
         break;
+      // こうげきは atkDown / atkUp で受け取る(長押しで飛びかかり)
       case "space":
         sendCmd({ k: "space", yaw });
         break;
@@ -12904,6 +13511,16 @@ function updatePlayer(dt) {
     PL.skill.needle += PL.skill.speed * dt;
     if (PL.skill.needle > PL.skill.z1 + 0.12) resolveSkill(true);
   }
+  if (PL.hold && !PL.hold.fired) {
+    if (!killerInput()) PL.hold = null;
+    else {
+      PL.hold.t += dt;
+      if (PL.hold.t >= LUNGE.hold) {
+        PL.hold.fired = true;
+        sendCmd({ k: "lunge", yaw: CAM.yaw, heavy: stanceHeld() });
+      }
+    }
+  }
   const me = G.me;
   PL.choice = null;
   if (!me || !alive(me) || PL.mapOpen) {
@@ -12917,7 +13534,7 @@ function updatePlayer(dt) {
   const fx2 = Math.sin(CAM.yaw), fz = Math.cos(CAM.yaw);
   me.look = CAM.yaw;
   me.aimY = CAM.aimY;
-  me.stance = stanceHeld() && !(me.kind === "killer" && me.dashT > 0) && me.state === "ok";
+  me.stance = stanceHeld() && !(me.kind === "killer" && (me.dashT > 0 || me.lunge || me.missT > 0)) && me.state === "ok";
   if (me.kind === "killer") {
     if (me.dashT > 0) {
       me.mx = fx2;
@@ -13054,28 +13671,28 @@ function boot() {
     if (!localStorage.getItem("butsumetsu_settings")) SET.quality = "low";
   }
   const cv = $("#cv");
-  renderer = new THREE9.WebGLRenderer({ canvas: cv, antialias: SET.quality === "high", powerPreference: "high-performance" });
+  renderer = new THREE10.WebGLRenderer({ canvas: cv, antialias: SET.quality === "high", powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, SET.quality === "high" ? 1.5 : 1));
   renderer.setSize(innerWidth, innerHeight);
-  renderer.outputColorSpace = THREE9.SRGBColorSpace;
-  scene = new THREE9.Scene();
+  renderer.outputColorSpace = THREE10.SRGBColorSpace;
+  scene = new THREE10.Scene();
   G.scene = scene;
-  scene.background = new THREE9.Color(461329);
-  scene.fog = new THREE9.FogExp2(659224, 0.032);
-  camera3 = new THREE9.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 170);
-  hemi = new THREE9.HemisphereLight(5926034, 1053196, 2.2);
-  moon = new THREE9.DirectionalLight(10137308, 1.3);
+  scene.background = new THREE10.Color(461329);
+  scene.fog = new THREE10.FogExp2(659224, 0.032);
+  camera3 = new THREE10.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 170);
+  hemi = new THREE10.HemisphereLight(5926034, 1053196, 2.2);
+  moon = new THREE10.DirectionalLight(10137308, 1.3);
   moon.position.set(-40, 60, -30);
   scene.add(hemi, moon);
-  flash = new THREE9.SpotLight(16773590, 0, 32, 0.45, 0.5, 1);
+  flash = new THREE10.SpotLight(16773590, 0, 32, 0.45, 0.5, 1);
   scene.add(flash, flash.target);
   for (let i = 0; i < 3; i++) {
-    const l = new THREE9.PointLight(16760944, 0, 11, 1);
+    const l = new THREE10.PointLight(16760944, 0, 11, 1);
     scene.add(l);
     lampLights.push(l);
   }
   buildWorld(scene);
-  fireLight = new THREE9.PointLight(16742960, 14, 18, 1);
+  fireLight = new THREE10.PointLight(16742960, 14, 18, 1);
   fireLight.position.set(W.campfire.x, 1.2, W.campfire.z);
   scene.add(fireLight);
   for (let i = 0; i < 8; i++) {
@@ -13099,7 +13716,7 @@ function boot() {
     scene.add(m);
     G.ksickles.push({ x: p.x, z: p.z, mesh: m, taken: false, n: 1 });
   }
-  if (W.sp.rack) G.ksickles.push({ x: W.sp.rack.fx, z: W.sp.rack.fz, mesh: new THREE9.Group(), taken: false, n: 2 });
+  if (W.sp.rack) G.ksickles.push({ x: W.sp.rack.fx, z: W.sp.rack.fz, mesh: new THREE10.Group(), taken: false, n: 2 });
   setupObjectives(scene);
   initInput(cv);
   initUI(camera3);
@@ -13107,6 +13724,15 @@ function boot() {
   setChoiceGetter(() => PL.choice);
   setSkillGetter(() => PL.skill);
   bus.on("pause", () => pause());
+  bus.on("press", (a) => {
+    if (G.mode !== "play") return;
+    if (adminOpen() && (a === "admin" || a === "menu")) {
+      closeModal();
+      closeAdmin();
+      return;
+    }
+    if (a === "admin" && SET.admin && !IN.uiOpen) openAdmin();
+  });
   bus.on("lockLost", () => {
     if (G.mode === "play" && !G.paused && !IN.uiOpen) pause();
   });
@@ -13162,7 +13788,7 @@ function boot() {
   toTitle();
   $("#loading").hidden = true;
   window.__bmReady = true;
-  clock = new THREE9.Clock();
+  clock = new THREE10.Clock();
   renderer.setAnimationLoop(frame);
   let hidT = performance.now();
   setInterval(() => {
@@ -13180,7 +13806,7 @@ function boot() {
       NET.hostTick(dt);
     }
   }, 250);
-  if (/[?&]debug/.test(location.search)) window.__bm = { G, W, SET, PL, CAM, NET, PROF, IN, CB: combat_exports, startSolo, endMatch, doors, windows };
+  if (/[?&]debug/.test(location.search)) window.__bm = { G, W, SET, PL, CAM, NET, PROF, IN, CB: combat_exports, ADM, bus, startSolo, endMatch, doors, windows };
 }
 function onResize() {
   renderer.setSize(innerWidth, innerHeight);
@@ -13198,6 +13824,16 @@ function toTitle() {
   openMap(false);
   unlock();
   showTitle();
+}
+function openAdmin() {
+  if (G.net === "solo") G.paused = true;
+  openMap(false);
+  showAdmin(() => closeAdmin());
+}
+function closeAdmin() {
+  G.paused = false;
+  if (G.mode === "play") lock(true);
+  refreshLockHint();
 }
 function pause() {
   if (G.mode !== "play") return;
@@ -13375,11 +14011,14 @@ function startFromConfig(cfg, mode, self) {
     if (G.me.perks.length) say("つけているパーク: " + G.me.perks.length + " つ", "dim");
   } else {
     say("カカシ男として、夜明けまでに学生たちをつかまえろ", "info");
-    say("力は時間で使えるようになる: 霧渡り(すぐ)→気配(0:45)→影走り(2:15)→忍び足(4:15)", "dim");
+    say(`力は時間で使えるようになる: 霧渡り(すぐ)→影走り(${mmss(KILLER.unlock.dash)})→気配(${mmss(KILLER.unlock.sense)})→忍び足(${mmss(KILLER.unlock.stalk)})`, "dim");
+    say("こうげきボタンを長押しすると、前に飛びかかる(外すと少したおれる)", "dim");
   }
   if (mode !== "solo") say(mode === "host" ? "あなたがホスト。ほかの人の計算もしている" : "ホストにつながった", "dim");
   scareSeen = -99;
   kVisPrev = false;
+  applyCheats();
+  if (SET.admin && mode === "solo") say(G.touch ? "管理者モード: 上の「管」でメニュー" : "管理者モード: F1 でメニュー", "dim");
   lock(true);
 }
 function checkEnd() {
@@ -13483,7 +14122,7 @@ function step(dt) {
   updateObjectives(dt);
   checkEnd();
 }
-var v32 = new THREE9.Vector3();
+var v33 = new THREE10.Vector3();
 function render(dt) {
   if (G.mode === "title" || !G.view) {
     titleT += dt * 0.06;
@@ -13513,9 +14152,9 @@ function render(dt) {
   const fo = flashOwner();
   if (fo) {
     flash.intensity = 36;
-    camera3.getWorldDirection(v32);
+    camera3.getWorldDirection(v33);
     flash.position.set(fo.x + Math.sin(fo.rot) * 0.2, fo.state === "vehicle" ? 1.4 : 1.35, fo.z + Math.cos(fo.rot) * 0.2);
-    flash.target.position.set(fo.x + v32.x * 12, 1.35 + v32.y * 12, fo.z + v32.z * 12);
+    flash.target.position.set(fo.x + v33.x * 12, 1.35 + v33.y * 12, fo.z + v33.z * 12);
   } else flash.intensity = 0;
   for (const it of G.items) it.glow.material.opacity = 0.35 + Math.sin(t * 3 + it.id) * 0.15;
   if (G.net === "client") for (let i = G.fx.length - 1; i >= 0; i--) {
@@ -13545,6 +14184,8 @@ function render(dt) {
     g.visible = !!senseOn && G.senseBld.has(i);
     if (g.visible) g.material.opacity = 0.35 + Math.sin(t * 4) * 0.12;
   });
+  if (SET.admin) applyCheats();
+  updateESP(camera3, scene);
   if (G.mode === "play") audioFrame(dt);
   else updateMusic(dt, { tension: 0.15, fear: 0, mode: "student", outside: true });
   updateHUD(dt);
