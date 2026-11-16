@@ -385,6 +385,9 @@ body.touch #prog { top: 48%; }
 .tb.t4 { right: calc(170px + env(safe-area-inset-right, 0px)); }
 .slot.gear b { font-size: 12px; }
 .slot.gear small { color: var(--dim); }
+.bp-list { columns: 2; font-size: 12px; }
+.bp-list b { color: var(--lantern); }
+.k-list + .btn { margin-top: 10px; }
 
 </style>
 </head>
@@ -658,7 +661,7 @@ var G = {
   touch: false,
   scene: null
 };
-var SKEYS = ["sens", "vol", "music", "quality", "diff", "role", "charId", "name", "pref", "touchSens", "admin"];
+var SKEYS = ["sens", "vol", "music", "quality", "diff", "role", "charId", "name", "pref", "touchSens", "admin", "botPerks"];
 var SET = {
   sens: 1,
   vol: 0.8,
@@ -671,6 +674,8 @@ var SET = {
   pref: "any",
   touchSens: 1,
   admin: false,
+  botPerks: { mode: "random", sets: {} },
+  // カカシ男で遊ぶ時の、コンピューターの学生のパーク
   load() {
     try {
       const s = JSON.parse(localStorage.getItem("butsumetsu_settings") || "{}");
@@ -3569,7 +3574,7 @@ var PERKS = [
   P("psychic", "第六感", [e("startWalkie", 1, 1, "トランシーバーを持って始まる")], [e("noise", 12, 3, "出す音が {v}% 大きい")]),
   P("pyro", "花火好き", [e("flareStun", 10, 40, "信号銃でひるませる力が {v}% 強い")], [e("fear", 10, 3, "こわさが {v}% たまりやすい")]),
   // ここから下は、しゅんりさんが考えたパーク(レア度に関係なく同じ強さ)
-  P("speedjustice", "すばやさこそ正義", [e("rapid", 1, 1, "攻撃ボタンを押すたびに、すぐ当たる(連打できる)。攻撃でスタミナを使わない"), e("dodgeDist", 65, 65, "回避で動く距離が 1.65 倍"), e("atkRange", 134, 134, "攻撃のとどく距離が 2.34 倍"), e("hitbox", 1, 1, "I キー(スマホは「範囲」)で、攻撃のとどく範囲を表示できる")], [e("rapidDmg", -90, -90, "武器のダメージが 10 分の 1")]),
+  P("speedjustice", "すばやさこそ正義", [e("rapid", 1, 1, "攻撃ボタンを押すたびに、すぐ当たる(連打できる)。攻撃でスタミナを使わない"), e("dodgeDist", 65, 65, "回避で動く距離が 1.65 倍"), e("atkRange", 134, 134, "攻撃のとどく距離が 2.34 倍"), e("hitbox", 1, 1, "I キー(スマホは「範囲」)で、攻撃のとどく範囲を表示できる"), e("dur", 2900, 2900, "武器の耐久力が 3000%(30 倍)")], [e("rapidDmg", -90, -90, "武器のダメージが 10 分の 1")]),
   P("meathead", "脳筋で何が悪い", [e("wDmg", 120, 120, "武器のダメージが {v}% 強い(2.2 倍)"), e("stun", 120, 120, "ひるませる力が {v}% 強い(2.2 倍)")], [e("fear", 100, 100, "こわさが {v}% たまりやすい(2 倍)")]),
   P("meatwall", "肉壁", [e("dmgTaken", -90, -90, "受けるダメージが {v}% へる"), e("walk", 45, 45, "歩く速さが {v}% 速い"), e("sprint", 40, 40, "走る速さが {v}% 速い")], [e("sprintStam", -95, -95, "走るためのスタミナが {v}% へる(走れる時間が 20 分の 1)")])
 ];
@@ -10132,16 +10137,22 @@ function showTitle() {
       "div",
       { class: "t-side" },
       el("div", { class: "t-roles" }, roleBtn("student", "学生で逃げる", "道具を集めて脱出"), roleBtn("killer", "カカシ男になる", "7人を追いつめる")),
-      SET.role === "student" ? el("div", { class: "t-chars" }, el("p", { class: "t-lbl" }, "使う学生"), el("div", { class: "chars" }, STUDENTS.map(charCard)), el("p", { class: "t-desc" }, `${cur.name}(${cur.tag}): ${cur.note}`)) : el("div", { class: "t-chars" }, el("p", { class: "t-lbl" }, "カカシ男の力(時間で使えるようになる)"), el(
-        "ul",
-        { class: "k-list" },
-        el("li", null, el("b", null, "霧渡り"), " 地図で選んだ場所へ一瞬で移動(すぐ使える)"),
-        el("li", null, el("b", null, "影走り"), ` 見えない影になって突進(${mmss(KILLER.unlock.dash)}〜・終わってから ${KILLER.cd.dash} 秒でまた使える)`),
-        el("li", null, el("b", null, "気配"), ` こわがる学生と、学生のいる建物が赤く光る(${mmss(KILLER.unlock.sense)}〜)`),
-        el("li", null, el("b", null, "忍び足"), ` 足音とこわい音楽を消す(${mmss(KILLER.unlock.stalk)}〜)`),
-        el("li", null, el("b", null, "飛びかかり"), ` こうげきボタン長押しで前に ${LUNGE.dist}m 飛ぶ。外すと ${LUNGE.miss} 秒たおれる`),
-        el("li", null, el("b", null, "構え"), " 右クリックでガード。構えたままのこうげきは 1.75 倍")
-      )),
+      SET.role === "student" ? el("div", { class: "t-chars" }, el("p", { class: "t-lbl" }, "使う学生"), el("div", { class: "chars" }, STUDENTS.map(charCard)), el("p", { class: "t-desc" }, `${cur.name}(${cur.tag}): ${cur.note}`)) : el(
+        "div",
+        { class: "t-chars" },
+        el("p", { class: "t-lbl" }, "カカシ男の力(時間で使えるようになる)"),
+        el(
+          "ul",
+          { class: "k-list" },
+          el("li", null, el("b", null, "霧渡り"), " 地図で選んだ場所へ一瞬で移動(すぐ使える)"),
+          el("li", null, el("b", null, "影走り"), ` 見えない影になって突進(${mmss(KILLER.unlock.dash)}〜・終わってから ${KILLER.cd.dash} 秒でまた使える)`),
+          el("li", null, el("b", null, "気配"), ` こわがる学生と、学生のいる建物が赤く光る(${mmss(KILLER.unlock.sense)}〜)`),
+          el("li", null, el("b", null, "忍び足"), ` 足音とこわい音楽を消す(${mmss(KILLER.unlock.stalk)}〜)`),
+          el("li", null, el("b", null, "飛びかかり"), ` こうげきボタン長押しで前に ${LUNGE.dist}m 飛ぶ。外すと ${LUNGE.miss} 秒たおれる`),
+          el("li", null, el("b", null, "構え"), " 右クリックでガード。構えたままのこうげきは 1.75 倍")
+        ),
+        el("button", { class: "btn", onclick: () => showBotPerks() }, `学生(コンピューター)のパーク: ${SET.botPerks && SET.botPerks.mode === "custom" ? "自分で決める" : "ランダム"}`)
+      ),
       el(
         "div",
         { class: "t-diff" },
@@ -10241,6 +10252,91 @@ function showPerks(back) {
     el("p", { class: "dim" }, "学生 1 人に 3 つまでつけられる。CP は試合で手に入る(逃げる・部品をつける・カカシ男をひるませる と多くもらえる)。"),
     tabs,
     body,
+    el("div", { class: "m-btns" }, el("button", { class: "btn", onclick: () => {
+      closeModal();
+      if (back) back();
+      else showTitle();
+    } }, "とじる"))
+  ));
+}
+var bpChar = null;
+function showBotPerks(back) {
+  const BP = SET.botPerks && SET.botPerks.sets ? SET.botPerks : SET.botPerks = { mode: "random", sets: {} };
+  bpChar = bpChar || STUDENTS[0].id;
+  const re = (msg) => {
+    SET.save();
+    showBotPerks(back);
+    if (msg) {
+      const n = U.modal.querySelector(".bp-msg");
+      if (n) n.textContent = msg;
+    }
+  };
+  const set = (BP.sets[bpChar] || [null, null, null]).slice(0, 3);
+  while (set.length < 3) set.push(null);
+  const put = (i, v) => {
+    set[i] = v;
+    BP.sets[bpChar] = set;
+    BP.mode = "custom";
+    re();
+  };
+  const slot = (i) => {
+    const cur = set[i];
+    const ps = el(
+      "select",
+      { "aria-label": `わく ${i + 1} のパーク`, onchange: (e2) => put(i, e2.target.value ? { id: e2.target.value, r: cur ? cur.r : 5 } : null) },
+      el("option", { value: "" }, "なし"),
+      PERKS.map((p) => el("option", { value: p.id, selected: cur && cur.id === p.id ? true : null }, p.name))
+    );
+    const rs = el(
+      "select",
+      { "aria-label": `わく ${i + 1} のレア度`, disabled: cur ? null : true, onchange: (e2) => {
+        if (cur) put(i, { id: cur.id, r: +e2.target.value || 0 });
+      } },
+      RARITY.map((r, j) => el("option", { value: j, selected: cur && cur.r === j ? true : null }, r.name))
+    );
+    const L3 = cur ? lines(cur.id, cur.r) : null;
+    return el(
+      "div",
+      { class: "slotp" },
+      el("p", { class: "t-lbl" }, `わく ${i + 1}`),
+      el("div", { class: "adm-row" }, ps, rs),
+      L3 ? L3.pos.map((t) => el("p", { class: "pos" }, "＋ " + t)) : null,
+      L3 ? L3.neg.map((t) => el("p", { class: "neg" }, "－ " + t)) : null
+    );
+  };
+  const name = (STUDENTS.find((s) => s.id === bpChar) || STUDENTS[0]).name;
+  const summary = (id) => (BP.sets[id] || []).filter(Boolean).map((o) => PERK[o.id] && PERK[o.id].name).filter(Boolean).join("・") || "なし";
+  modal(el(
+    "div",
+    { class: "card perks" },
+    el("h2", null, "学生(コンピューター)のパーク"),
+    el("p", { class: "dim" }, "カカシ男で遊ぶ時に、コンピューターの学生がつけるパーク。持っていないパークも、レア度も自由に選べる(ひとりで遊ぶ時と、クイックプレイで自分がホストのカカシ男の時)。"),
+    el("div", { class: "seg" }, [["random", "ランダム(今まで通り)"], ["custom", "自分で決める"]].map(([id, n]) => el("button", { class: BP.mode === id ? "on" : "", onclick: () => {
+      BP.mode = id;
+      re();
+    } }, n))),
+    el("div", { class: "chips" }, STUDENTS.map((s) => el("button", { class: "chip" + (bpChar === s.id ? " on" : ""), title: summary(s.id), onclick: () => {
+      bpChar = s.id;
+      re();
+    } }, s.name))),
+    el("p", { class: "t-lbl" }, `${name} のパーク(3 つまで)`),
+    el("div", { class: "slots3" }, [0, 1, 2].map(slot)),
+    el(
+      "div",
+      { class: "m-btns left" },
+      el("button", { class: "btn primary", onclick: () => {
+        const src = set.map((o) => o ? { id: o.id, r: o.r } : null);
+        for (const s of STUDENTS) BP.sets[s.id] = src.map((o) => o ? { ...o } : null);
+        BP.mode = "custom";
+        re(`全員を ${name} と同じにした`);
+      } }, `全員を ${name} と同じにする`),
+      el("button", { class: "btn", onclick: () => {
+        BP.sets = {};
+        re("全員のパークを外した");
+      } }, "全員なしにする")
+    ),
+    el("p", { class: "dim bp-msg" }, ""),
+    el("ul", { class: "bp-list" }, STUDENTS.map((s) => el("li", null, el("b", null, s.name), " ", summary(s.id)))),
     el("div", { class: "m-btns" }, el("button", { class: "btn", onclick: () => {
       closeModal();
       if (back) back();
@@ -10848,7 +10944,7 @@ function updateHUD(dt) {
       U.h_inv.innerHTML = "";
       const slot = (key, label, sub, cls) => el("div", { class: "slot " + (cls || "") }, el("kbd", null, key), el("b", null, label), sub ? el("small", null, sub) : null);
       U.h_inv.append(
-        slot("クリック", wpn ? ITEMS[wpn.type].name : "武器なし", wpn ? wpn.type === "gun" ? `弾 ${wpn.ammo}` : `のこり ${Math.max(0, Math.ceil(wpn.dur))} 回` : "", wpn ? "" : "empty"),
+        slot("クリック", wpn ? ITEMS[wpn.type].name : "武器なし", wpn ? wpn.type === "gun" ? `弾 ${wpn.ammo}` : `のこり ${Math.max(0, Math.ceil(wpn.dur * (1 + (me.pm && me.pm.dur || 0) / 100)))} 回` : "", wpn ? "" : "empty"),
         slot("G", me.inv.part ? ITEMS[me.inv.part].name : "部品なし", me.inv.part ? "1つだけ持てる" : "", me.inv.part ? "part" : "empty"),
         ...me.inv.pockets.map((p, i) => slot(String(i + 1), p ? ITEMS[p].short : "―", p ? ITEMS[p].hint + "(長押しで落とす)" : "", p ? "" : "empty")),
         ...me.inv.map || me.inv.walkie ? [el("div", { class: "slot gear" }, el("b", null, [me.inv.map ? "地図" : "", me.inv.walkie ? "無線機" : ""].filter(Boolean).join("・")), el("small", null, "ポケットの外"))] : []
@@ -13914,7 +14010,7 @@ function boot() {
   NET.onStart = (cfg, role, players) => {
     if (role === "host") {
       const humans = players.map((p) => ({ peer: p.peer, name: p.name, pref: p.pref, char: p.char, perks: p.perks || [] }));
-      const c = buildConfig(humans, SET.diff);
+      const c = buildConfig(humans, SET.diff, selfId);
       sendGo(c);
       startFromConfig(c, "host", selfId);
     } else startFromConfig(cfg, "client", selfId);
@@ -14035,7 +14131,7 @@ function clearMatch() {
   for (const m of senseMarks) m.visible = false;
   for (const m of bldGlows) m.visible = false;
 }
-function buildConfig(humans, diff) {
+function buildConfig(humans, diff, selfPeer) {
   let killerHuman = null;
   const want = humans.filter((h) => h.pref === "killer");
   const any = humans.filter((h) => h.pref === "any");
@@ -14062,18 +14158,21 @@ function buildConfig(humans, diff) {
   const spots = shuffle(W.weaponSpots.slice());
   const weapons = spots.slice(0, 11).map((p) => [pick(WEAPON_POOL), p.x, p.z]);
   const sp = shuffle(W.spawns.slice());
+  const BP = SET.botPerks;
+  const custom = killerHuman && killerHuman.peer === selfPeer && BP && BP.mode === "custom";
+  const botPerks = (id2) => custom ? ((BP.sets || {})[id2] || []).filter(Boolean).slice(0, 3).map((o) => ({ id: o.id, r: o.r | 0 })) : randomPerks(Math.floor(Math.random() * 4));
   let id = 1;
   const actors = STUDENTS.map((d, i) => {
     const h = assign.get(d.id);
     const p = sp[i % sp.length];
-    return { id: id++, kind: "student", def: d.id, x: p.x + (i >= sp.length ? 1 : 0), z: p.z, rot: Math.atan2(W.campfire.x - p.x, W.campfire.z - p.z), peer: h ? h.peer : null, name: h ? h.name : "", perks: h ? h.perks : randomPerks(Math.floor(Math.random() * 4)) };
+    return { id: id++, kind: "student", def: d.id, x: p.x + (i >= sp.length ? 1 : 0), z: p.z, rot: Math.atan2(W.campfire.x - p.x, W.campfire.z - p.z), peer: h ? h.peer : null, name: h ? h.name : "", perks: h ? h.perks : botPerks(d.id) };
   });
   actors.push({ id: id++, kind: "killer", def: "killer", x: W.killerSpawn.x, z: W.killerSpawn.z, rot: Math.PI, peer: killerHuman ? killerHuman.peer : null, name: killerHuman ? killerHuman.name : "", perks: [] });
   return { diff, loot, weapons, actors };
 }
 function startSolo() {
   const humans = [{ peer: "local", name: "", pref: SET.role === "killer" ? "killer" : "student", char: SET.charId, perks: equipped(SET.charId) }];
-  startFromConfig(buildConfig(humans, SET.diff), "solo", "local");
+  startFromConfig(buildConfig(humans, SET.diff, "local"), "solo", "local");
 }
 function startFromConfig(cfg, mode, self) {
   clearMatch();
