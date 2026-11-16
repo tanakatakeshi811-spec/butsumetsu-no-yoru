@@ -42,4 +42,5 @@ P2P なので、いっしょに遊ぶ人にはおたがいのネットの住所(
 
 - [three.js](https://threejs.org/) r160(MIT)
 - [Trystero](https://github.com/dmotz/trystero) 0.26.0(MIT)
-- 音はすべてその場で合成しています。名前・キャラクター・見た目はすべてオリジナルです。
+- 3D モデル(すべて CC0): [Kenney](https://kenney.nl/)(Blocky Characters・Survival Kit・Food Kit・Graveyard Kit・Pirate Kit)、[Quaternius](https://quaternius.com/)・Pichuliru・CreativeTrio([Poly Pizza](https://poly.pizza/) から)。設定で前の見た目(レガシー)にもどせます
+- 音はすべてその場で合成しています。名前と物語はオリジナルです。
