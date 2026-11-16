@@ -381,6 +381,11 @@ body.touch #prog { top: 48%; }
 .espl.far { opacity: 0.6; }
 @media (prefers-reduced-motion: reduce) { #vign.beat, #vign.panic { animation: none; } }
 
+/* 3 回目: 範囲ボタン・ポケットの外の持ち物 */
+.tb.t4 { right: calc(170px + env(safe-area-inset-right, 0px)); }
+.slot.gear b { font-size: 12px; }
+.slot.gear small { color: var(--dim); }
+
 </style>
 </head>
 <body>
@@ -416,7 +421,7 @@ import * as THREE10 from "three";
 var HALF = 90;
 var CELL = 0.5;
 var N = 360;
-var VERSION = "bm3";
+var VERSION = "bm4";
 var MATCH_TIME = 20 * 60;
 var POLICE_DELAY = 300;
 var HERO_DELAY = 30;
@@ -525,6 +530,7 @@ var HERO = {
   st: { calm: 10, luck: 7, repair: 7, speed: 8, stamina: 9, stealth: 6, power: 9 }
 };
 var STAT = [["calm", "冷静"], ["luck", "運"], ["repair", "修理"], ["speed", "速さ"], ["stamina", "体力"], ["stealth", "隠密"], ["power", "力"]];
+var DUR = 5;
 var ITEMS = {
   key: { name: "車のカギ", short: "カギ", kind: "part", color: "#e8c34a" },
   battery: { name: "バッテリー", short: "バッテリー", kind: "part", color: "#58a6ec" },
@@ -537,15 +543,15 @@ var ITEMS = {
   spray2: { name: "救急スプレー(2回)", short: "スプレー×2", kind: "pocket", color: "#7fe0a0", hint: "ケガを治す(あと2回)" },
   fire: { name: "爆竹", short: "爆竹", kind: "pocket", color: "#ff6a4c", hint: "近くのカカシ男をひるませる" },
   flare: { name: "信号銃", short: "信号銃", kind: "pocket", color: "#ffa040", hint: "遠くから撃って大きくひるませる" },
-  map: { name: "地図", short: "地図", kind: "pocket", color: "#d8c89a", passive: true, hint: "持っていると Tab で地図が見られる" },
-  walkie: { name: "トランシーバー", short: "無線機", kind: "pocket", color: "#8fb0d8", passive: true, hint: "持っている仲間の場所が地図に出る" },
+  map: { name: "地図", short: "地図", kind: "gear", color: "#d8c89a", hint: "ポケットには入らない。持っていると Tab で地図が見られる" },
+  walkie: { name: "トランシーバー", short: "無線機", kind: "gear", color: "#8fb0d8", hint: "ポケットには入らない。持っている仲間の場所が地図に出る" },
   btrap: { name: "トラバサミ", short: "ワナ", kind: "pocket", color: "#9a9690", hint: "置くとカカシ男を足止めできる" },
-  bat: { name: "バット", kind: "weapon", dur: 4, stun: 1.7, dmg: 12, color: "#c09060" },
-  axe: { name: "オノ", kind: "weapon", dur: 3, stun: 2, dmg: 16, color: "#a8b0b8" },
-  pan: { name: "フライパン", kind: "weapon", dur: 5, stun: 1.4, dmg: 10, color: "#8a8a8a" },
-  shovel: { name: "スコップ", kind: "weapon", dur: 4, stun: 1.8, dmg: 13, color: "#9aa0a6" },
-  wrench: { name: "スパナ", kind: "weapon", dur: 5, stun: 1.3, dmg: 9, color: "#a0aaaa" },
-  oar: { name: "オール", kind: "weapon", dur: 3, stun: 1.8, dmg: 12, color: "#c8a26a" },
+  bat: { name: "バット", kind: "weapon", dur: 4 * DUR, stun: 1.7, dmg: 12, color: "#c09060" },
+  axe: { name: "オノ", kind: "weapon", dur: 3 * DUR, stun: 2, dmg: 16, color: "#a8b0b8" },
+  pan: { name: "フライパン", kind: "weapon", dur: 5 * DUR, stun: 1.4, dmg: 10, color: "#8a8a8a" },
+  shovel: { name: "スコップ", kind: "weapon", dur: 4 * DUR, stun: 1.8, dmg: 13, color: "#9aa0a6" },
+  wrench: { name: "スパナ", kind: "weapon", dur: 5 * DUR, stun: 1.3, dmg: 9, color: "#a0aaaa" },
+  oar: { name: "オール", kind: "weapon", dur: 3 * DUR, stun: 1.8, dmg: 12, color: "#c8a26a" },
   gun: { name: "猟銃", kind: "weapon", dur: 99, stun: 1.6, dmg: 10, color: "#777777", ammo: 1 }
 };
 var LOOT_PARTS = ["key", "key", "battery", "battery", "gas", "gas", "gas", "prop", "fuse"];
@@ -584,8 +590,11 @@ var KILLER = {
   minStun: 0.6,
   stunImm: 2.5,
   doorHits: 6,
-  throwCd: 3.5
+  throwCd: 3.5,
+  escapeStun: 2.3
+  // 学生につかみからぬけられると 2.3 秒動けない(連打では早まらない)
 };
+var DROP_HOLD = 0.5;
 var VAULT = { climb: 0.85 / 2.25 * 6.7, open: 0.25, dive: 0.45, getUp: 3.5, glass: 8 * 3 * 2, openDiv: 3.5 };
 var LUNGE = { hold: 0.35, dist: 5, dur: 0.42, reach: 1.35, miss: 0.7 };
 var STANCE = { heavy: 1.75, heavyStun: 1.3, studentSpeed: 0.6, heavyCost: 15, normalCost: 8, dodgeCost: 18, dodgeDur: 0.35, dodgeDist: 2.4 };
@@ -2814,7 +2823,8 @@ var KEYMAP = {
   KeyC: "crouch",
   Enter: "enter",
   KeyV: "v",
-  F1: "admin"
+  F1: "admin",
+  KeyI: "hitbox"
 };
 function initInput(cv) {
   canvas = cv;
@@ -3448,7 +3458,9 @@ import * as THREE8 from "three";
 // src/combat.js
 var combat_exports = {};
 __export(combat_exports, {
+  ATK_ANGLE: () => ATK_ANGLE,
   W: () => W,
+  atkReach: () => atkReach,
   breakDoor: () => breakDoor,
   breakWindow: () => breakWindow,
   damage: () => damage,
@@ -3555,7 +3567,11 @@ var PERKS = [
   P("tinker", "器用", [e("repair", 8, 30, "修理が {v}% 速い")], [e("wDmg", -10, -3, "武器のダメージが {v}% 弱い")]),
   P("thrasher", "オノ使い", [e("wDmgAxe", 10, 40, "オノのダメージが {v}% 強い")], [e("wDmgNonAxe", -10, -3, "オノ以外の武器のダメージが {v}% 弱い")]),
   P("psychic", "第六感", [e("startWalkie", 1, 1, "トランシーバーを持って始まる")], [e("noise", 12, 3, "出す音が {v}% 大きい")]),
-  P("pyro", "花火好き", [e("flareStun", 10, 40, "信号銃でひるませる力が {v}% 強い")], [e("fear", 10, 3, "こわさが {v}% たまりやすい")])
+  P("pyro", "花火好き", [e("flareStun", 10, 40, "信号銃でひるませる力が {v}% 強い")], [e("fear", 10, 3, "こわさが {v}% たまりやすい")]),
+  // ここから下は、しゅんりさんが考えたパーク(レア度に関係なく同じ強さ)
+  P("speedjustice", "すばやさこそ正義", [e("rapid", 1, 1, "攻撃ボタンを押すたびに、すぐ当たる(連打できる)。攻撃でスタミナを使わない"), e("dodgeDist", 65, 65, "回避で動く距離が 1.65 倍"), e("atkRange", 134, 134, "攻撃のとどく距離が 2.34 倍"), e("hitbox", 1, 1, "I キー(スマホは「範囲」)で、攻撃のとどく範囲を表示できる")], [e("rapidDmg", -90, -90, "武器のダメージが 10 分の 1")]),
+  P("meathead", "脳筋で何が悪い", [e("wDmg", 120, 120, "武器のダメージが {v}% 強い(2.2 倍)"), e("stun", 120, 120, "ひるませる力が {v}% 強い(2.2 倍)")], [e("fear", 100, 100, "こわさが {v}% たまりやすい(2 倍)")]),
+  P("meatwall", "肉壁", [e("dmgTaken", -90, -90, "受けるダメージが {v}% へる"), e("walk", 45, 45, "歩く速さが {v}% 速い"), e("sprint", 40, 40, "走る速さが {v}% 速い")], [e("sprintStam", -95, -95, "走るためのスタミナが {v}% へる(走れる時間が 20 分の 1)")])
 ];
 var PERK = Object.fromEntries(PERKS.map((p) => [p.id, p]));
 var valAt = (ef, r) => Math.round(ef.a + (ef.b - ef.a) * (r / 5));
@@ -8051,6 +8067,9 @@ function studentCmd(a, c) {
     case "pocket":
       usePocket(a, c.i, yaw);
       break;
+    case "dropp":
+      dropPocket(a, c.i | 0);
+      break;
     case "drop":
       if (a.state === "ok") dropPart(a);
       break;
@@ -8213,7 +8232,7 @@ function think(s) {
     if (s.act) cancelAct(s);
     ai.task = null;
     ai.mode = "help";
-    if (dist(s, k) < 2.2) {
+    if (dist(s, k) < atkReach(s, true) - 0.3) {
       s.mx = s.mz = 0;
       s.stance = true;
       studentSwing(s, angTo(s, k), true);
@@ -8236,7 +8255,7 @@ function think(s) {
       usePocket(s, pocketIndex(s, "fire"));
       return;
     }
-    if (s.inv.weapon && d < 2.1) {
+    if (s.inv.weapon && d < atkReach(s, false) - 0.15) {
       s.mx = s.mz = 0;
       studentSwing(s, angTo(s, k));
       return;
@@ -8310,7 +8329,7 @@ function flee(s, dg) {
   if (ai.mode === "hiding" && ai.task && ai.task.type === "hide" && !ai.ksee) return;
   ai.mode = "flee";
   ai.task = null;
-  if (ai.ksee && d < 2.4 && s.inv.weapon && !k.stun && (s.stam < 25 || s.st.power >= 7 || Math.random() < 0.25 * ai.skill)) {
+  if (ai.ksee && d < atkReach(s, false) + 0.15 && s.inv.weapon && !k.stun && (s.stam < 25 || s.st.power >= 7 || Math.random() < 0.25 * ai.skill)) {
     s.mx = s.mz = 0;
     studentSwing(s, angTo(s, k));
     return;
@@ -8473,6 +8492,8 @@ function onFound(s, its) {
       if (isNeeded(it.type) && (!s.inv.part || !isNeeded(s.inv.part))) pickup(s, it);
     } else if (def.kind === "pocket") {
       if (s.inv.pockets.includes(null)) pickup(s, it);
+    } else if (def.kind === "gear") {
+      if (!s.inv[it.type]) pickup(s, it);
     } else if (!s.inv.weapon) pickup(s, it);
   }
 }
@@ -8554,6 +8575,13 @@ function pickTask(s) {
     if (p2) {
       claim(p2, s);
       return { type: "fetch", obj: p2, x: p2.x, z: p2.z, until: G.t + 15 };
+    }
+  }
+  {
+    const g = nearestItem(s, (it) => ITEMS[it.type].kind === "gear" && !s.inv[it.type] && !claimed(it, s), 12);
+    if (g) {
+      claim(g, s);
+      return { type: "fetch", obj: g, x: g.x, z: g.z, until: G.t + 15 };
     }
   }
   if (!G.radio.used && W.sp.radio && Math.hypot(W.sp.radio.fx - s.x, W.sp.radio.fz - s.z) < 40 && !claimed(G.radio, s)) {
@@ -9360,12 +9388,12 @@ function hostTick(dt) {
     V: G.vehicles.map((v) => [r2(v.x), r2(v.z), r2(v.rot), r2(v.v), ["parked", "starting", "running", "gone"].indexOf(v.state), Object.values(v.parts).map((p) => p ? 1 : 0).join(""), v.mesh.visible ? 1 : 0]),
     P: [G.phone.fuse ? 1 : 0, G.phone.called ? 1 : 0, Math.ceil(G.phone.eta), G.phone.arrived ? 1 : 0, G.phone.exit ? W.exits.indexOf(G.phone.exit) : -1],
     R: [G.radio.used ? 1 : 0, G.hero ? G.hero.id : -1],
-    N: G.students.map((a) => [a.id, a.inv.weapon ? a.inv.weapon.type : "", a.inv.weapon ? r2(a.inv.weapon.dur) : 0, a.inv.weapon ? a.inv.weapon.ammo || 0 : 0, a.inv.part || "", ...a.inv.pockets.map((p) => p || "")]),
+    N: G.students.map((a) => [a.id, a.inv.weapon ? a.inv.weapon.type : "", a.inv.weapon ? r2(a.inv.weapon.dur) : 0, a.inv.weapon ? a.inv.weapon.ammo || 0 : 0, a.inv.part || "", (a.inv.map ? 1 : 0) | (a.inv.walkie ? 2 : 0), ...a.inv.pockets.map((p) => p || "")]),
     J: G.proj.map((p) => [p.kind === "sickle" ? 0 : 1, r2(p.x), r2(p.y), r2(p.z)]),
     KS: G.ksickles.map((o) => o.taken ? 1 : 0).join("")
   };
   const k = G.killer;
-  if (k) s.K = [r2(k.dmg), k.maskOff ? 1 : 0, k.sickles, k.traps, Math.ceil(k.cd.morph), Math.ceil(k.cd.dash), Math.ceil(k.cd.sense), Math.ceil(k.cd.stalk), r2(k.senseT), r2(k.stalkT), k.stun ? Math.ceil(k.stun.left) : 0, k.stun ? k.stun.need : 0, r2(k.throwCd)];
+  if (k) s.K = [r2(k.dmg), k.maskOff ? 1 : 0, k.sickles, k.traps, Math.ceil(k.cd.morph), Math.ceil(k.cd.dash), Math.ceil(k.cd.sense), Math.ceil(k.cd.stalk), r2(k.senseT), r2(k.stalkT), k.stun ? k.stun.fixed ? -Math.max(1, Math.round((k.stun.fixed - k.stun.t) * 10)) : Math.ceil(k.stun.left) : 0, k.stun ? k.stun.fixed ? -Math.round(k.stun.fixed * 10) : k.stun.need : 0, r2(k.throwCd)];
   if (k && k.ctrl === "remote") {
     s.S = [...G.senseIds];
     s.B = [...G.senseBld];
@@ -9568,9 +9596,11 @@ function applySnap(s) {
     P3.light.intensity = 40;
   }
   G.radio.used = !!s.R[0];
-  for (const [id, wt, wd, wa, part, ...pk] of s.N) {
+  for (const [id, wt, wd, wa, part, gear, ...pk] of s.N) {
     const a = byId(id);
     if (!a || !a.inv) continue;
+    a.inv.map = !!(gear & 1);
+    a.inv.walkie = !!(gear & 2);
     a.inv.weapon = wt ? { type: wt, dur: wd, ammo: wa } : null;
     a.inv.part = part || null;
     a.inv.pockets = pk.map((p) => p || null);
@@ -9586,8 +9616,14 @@ function applySnap(s) {
     k.stalkT = stalkT;
     k.throwCd = tcd;
     if (k.stun) {
-      k.stun.left = sl;
-      k.stun.need = sn;
+      if (sn < 0) {
+        k.stun.fixed = -sn / 10;
+        k.stun.t = k.stun.fixed + sl / 10;
+      } else {
+        k.stun.fixed = 0;
+        k.stun.left = sl;
+        k.stun.need = sn;
+      }
     }
   }
   G.senseIds = new Set(s.S || []);
@@ -9885,7 +9921,9 @@ function allPerkMods() {
 function giveStartItems(a) {
   if (!a.inv) return;
   if (!a.inv.weapon) a.inv.weapon = { type: "bat", dur: ITEMS.bat.dur };
-  for (const t of ["spray2", "fire", "map"]) {
+  a.inv.map = true;
+  a.inv.walkie = true;
+  for (const t of ["spray2", "fire"]) {
     if (a.inv.pockets.includes(t) || t === "spray2" && a.inv.pockets.includes("spray")) continue;
     const i = a.inv.pockets.indexOf(null);
     if (i < 0) break;
@@ -10276,7 +10314,7 @@ function quickUI(force = false) {
 function equippedFor(charId) {
   return (PROF.eq[charId] || []).map((u) => PROF.owned.find((o) => o.u === u)).filter(Boolean).map((o) => ({ id: o.id, r: o.r }));
 }
-var KEYS_S = [["WASD", "歩く"], ["Shift", "走る(スタミナを使う)"], ["C", "しゃがむ(足音が出ない)"], ["E", `調べる・拾う・ドア・かくれる・乗る・窓(ふつうに乗りこえると約 ${VAULT.climb.toFixed(1)} 秒)`], ["走りながら E", `窓に飛びこむ(速いが、たおれて ${VAULT.getUp} 秒動けない。閉まった窓はケガ ${VAULT.glass})`], ["R", "バリケード・窓をそっと開ける"], ["左クリック", "武器でなぐる"], ["右クリック(長押し)", "構え: こうげきが 1.75 倍、スペースで回避"], ["1 2 3", "ポケットの道具を使う"], ["F", "懐中電灯"], ["G", "部品を置く"], ["スペース", "修理のタイミング・つかまれたら連打"], ["Tab", "地図(地図を持っている時)"], ["Esc", "メニュー"]];
+var KEYS_S = [["WASD", "歩く"], ["Shift", "走る(スタミナを使う)"], ["C", "しゃがむ(足音が出ない)"], ["E", `調べる・拾う・ドア・かくれる・乗る・窓(ふつうに乗りこえると約 ${VAULT.climb.toFixed(1)} 秒)`], ["走りながら E", `窓に飛びこむ(速いが、たおれて ${VAULT.getUp} 秒動けない。閉まった窓はケガ ${VAULT.glass})`], ["R", "バリケード・窓をそっと開ける"], ["左クリック", "武器でなぐる"], ["右クリック(長押し)", "構え: こうげきが 1.75 倍、スペースで回避"], ["1 2 3", "ポケットの道具を使う(長押しで落とす)"], ["I", "攻撃のとどく範囲(パーク「すばやさこそ正義」)"], ["F", "懐中電灯"], ["G", "部品を置く"], ["スペース", "修理のタイミング・つかまれたら連打"], ["Tab", "地図(地図を持っている時)"], ["Esc", "メニュー"]];
 var KEYS_K = [["WASD", "歩く"], ["左クリック", "鎌でこうげき(ドアや窓もこわす)"], ["左クリック長押し", `前に ${LUNGE.dist}m 飛びかかってこうげき(外すと ${LUNGE.miss} 秒たおれる)`], ["右クリック(長押し)", "構え: ガード。構えたままのこうげきは 1.75 倍"], ["E", "つかむ・ドアを開ける・かくれ場所を調べる・投げ鎌を拾う"], ["スペース", "とどめ / ひるんだら連打で起きる"], ["Shift / 2", "影走り"], ["Q / 3", "気配"], ["X / 4", "忍び足"], ["1", "霧渡り(地図で場所を選ぶ)"], ["F", "投げ鎌"], ["R", "トラバサミを置く(外だけ)"], ["Tab", "地図"], ["F1", "管理者メニュー(管理者モードの時)"]];
 function showHelp(back) {
   modal(el(
@@ -10300,7 +10338,7 @@ function showHelp(back) {
           el("li", null, el("b", null, "封印"), " 武器でダメージを入れて仮面をはがし、構えた強こうげきなどの「スタン特大」で地面にたおす。たおれている間にカカシ小屋のお札を貼る"),
           el("li", null, el("b", null, "無線"), " 無線小屋で呼ぶと、2人がやられた(逃げた)後に猟師のゲンが来る。やられた人がゲンになれる")
         ),
-        el("p", { class: "tip" }, "部品は1つしか持てない。カカシ男は窓を通れない。湖は泳いで渡れる。地図は「地図」を拾うと見られる。"),
+        el("p", { class: "tip" }, "部品は1つしか持てない。カカシ男は窓を通れない。湖は泳いで渡れる。地図とトランシーバーはポケットに入らない(持っているだけで使える)。ポケットの道具は数字を長押しすると落とせる。"),
         el("h3", null, "こわさ"),
         el("p", null, `カカシ男が見えたり、ケガをさせられたりすると上がる。冷静さが高い学生ほど上がりにくく、早く落ち着く。${FEAR.lv[1]} 以上(こわい)でスタミナが戻りにくく走るとつまずき、${FEAR.lv[2]} 以上(パニック)は修理のタイミングもむずかしくなる。気配にも映りやすい。`),
         el("h3", null, "学生のキー"),
@@ -10495,8 +10533,8 @@ function drawMap2() {
   icon(W.boatExit.x, W.boatExit.z, "#c8302a", "ブイ", 5);
   const me = G.me;
   if (G.role === "student") {
-    const mine = me && me.inv && me.inv.pockets.includes("walkie");
-    for (const s of G.students) if (s !== me && mine && s.inv && s.inv.pockets.includes("walkie") && (s.state === "ok" || s.state === "hidden" || s.state === "vehicle" || s.state === "grabbed")) icon(s.x, s.z, "#" + s.def.shirt.toString(16).padStart(6, "0"), s.name, 5);
+    const mine = me && me.inv && me.inv.walkie;
+    for (const s of G.students) if (s !== me && mine && s.inv && s.inv.walkie && (s.state === "ok" || s.state === "hidden" || s.state === "vehicle" || s.state === "grabbed")) icon(s.x, s.z, "#" + s.def.shirt.toString(16).padStart(6, "0"), s.name, 5);
   } else {
     const kk = G.killer;
     if (kk && kk.senseT > 0) {
@@ -10548,6 +10586,7 @@ function buildTouch() {
   for (const [a, label, cls] of G.role === "killer" ? TB_K : TB_S) {
     const b = el("button", { class: "tb " + cls, "data-a": a }, el("span", null, label));
     const hold = a === "attack" && G.role === "killer";
+    const pk = G.role !== "killer" && /^s[123]$/.test(a);
     b.addEventListener("pointerdown", (e2) => {
       e2.preventDefault();
       e2.stopPropagation();
@@ -10570,8 +10609,19 @@ function buildTouch() {
         bus.emit("atkDown");
         return;
       }
+      if (pk) {
+        try {
+          b.setPointerCapture(e2.pointerId);
+        } catch (err) {
+        }
+      }
       bus.emit("press", a);
     });
+    if (pk) {
+      const up = () => bus.emit("release", a);
+      b.addEventListener("pointerup", up);
+      b.addEventListener("pointercancel", up);
+    }
     if (hold) {
       b.addEventListener("pointerup", (e2) => {
         e2.preventDefault();
@@ -10585,6 +10635,15 @@ function buildTouch() {
       b.append(el("small", null, "長押し:飛ぶ"));
     }
     box2.append(b);
+  }
+  if (G.role !== "killer" && G.me && G.me.pm && G.me.pm.hitbox > 0) {
+    const hb = el("button", { class: "tb top t4", "data-a": "hitbox" }, el("span", null, "範囲"));
+    hb.addEventListener("pointerdown", (e2) => {
+      e2.preventDefault();
+      e2.stopPropagation();
+      bus.emit("press", "hitbox");
+    });
+    box2.append(hb);
   }
   if (SET.admin) {
     const ab = el("button", { class: "tb top t3", "data-a": "admin" }, el("span", null, "管"));
@@ -10630,7 +10689,7 @@ function updateTouch() {
     altB.hidden = !(c && c.R);
     if (c && c.R) altB.firstChild.textContent = c.R.label.slice(0, 6);
   }
-  const mashOn = c && c.mash || me.kind === "killer" && me.stun;
+  const mashOn = c && c.mash || me.kind === "killer" && me.stun && !me.stun.fixed;
   box2.querySelector(".mashbtn").hidden = !mashOn;
   const dodgeB = box2.querySelector('[data-a="space"]');
   if (dodgeB && G.role !== "killer") dodgeB.hidden = !IN.touchStance;
@@ -10732,9 +10791,14 @@ function updateHUD(dt) {
   }
   if (me && me.kind === "killer" && me.stun) {
     mash = true;
-    U.mash_l.textContent = me.stun.down ? "たおれた！ スペースを連打して起き上がれ" : "ひるんだ！ スペースを連打";
-    const n = me.stun.need || 1;
-    U.mash_b.style.width = pct((1 - Math.max(0, me.stun.left) / n) * 100);
+    if (me.stun.fixed) {
+      U.mash_l.textContent = `ふりほどかれた！ あと ${Math.max(0, me.stun.fixed - (me.stun.t || 0)).toFixed(1)} 秒動けない`;
+      U.mash_b.style.width = pct((me.stun.t || 0) / me.stun.fixed * 100);
+    } else {
+      U.mash_l.textContent = me.stun.down ? "たおれた！ スペースを連打して起き上がれ" : "ひるんだ！ スペースを連打";
+      const n = me.stun.need || 1;
+      U.mash_b.style.width = pct((1 - Math.max(0, me.stun.left) / n) * 100);
+    }
   }
   U.mash.hidden = !mash;
   if (G.role === "killer") updatePings();
@@ -10770,7 +10834,7 @@ function updateHUD(dt) {
   }
   if (G.role === "student" && me && me.inv) {
     const wpn = me.inv.weapon;
-    const sig2 = [me.name, Math.round(me.hp), Math.round(me.stam / 5), Math.round(me.fear / 5), fearLevel(me.fear), me.flash, me.crouch, me.exhausted, me.swim, wpn && wpn.type, wpn && Math.ceil(wpn.dur), wpn && wpn.ammo, me.inv.part, me.inv.pockets.join(), me.state].join();
+    const sig2 = [me.name, Math.round(me.hp), Math.round(me.stam / 5), Math.round(me.fear / 5), fearLevel(me.fear), me.flash, me.crouch, me.exhausted, me.swim, wpn && wpn.type, wpn && Math.ceil(wpn.dur), wpn && wpn.ammo, me.inv.part, me.inv.pockets.join(), me.inv.map, me.inv.walkie, me.state].join();
     if (U.h_me.dataset.k !== sig2) {
       U.h_me.dataset.k = sig2;
       U.h_me.innerHTML = "";
@@ -10784,9 +10848,10 @@ function updateHUD(dt) {
       U.h_inv.innerHTML = "";
       const slot = (key, label, sub, cls) => el("div", { class: "slot " + (cls || "") }, el("kbd", null, key), el("b", null, label), sub ? el("small", null, sub) : null);
       U.h_inv.append(
-        slot("クリック", wpn ? ITEMS[wpn.type].name : "武器なし", wpn ? wpn.type === "gun" ? `弾 ${wpn.ammo}` : "●".repeat(Math.max(0, Math.ceil(wpn.dur))) : "", wpn ? "" : "empty"),
+        slot("クリック", wpn ? ITEMS[wpn.type].name : "武器なし", wpn ? wpn.type === "gun" ? `弾 ${wpn.ammo}` : `のこり ${Math.max(0, Math.ceil(wpn.dur))} 回` : "", wpn ? "" : "empty"),
         slot("G", me.inv.part ? ITEMS[me.inv.part].name : "部品なし", me.inv.part ? "1つだけ持てる" : "", me.inv.part ? "part" : "empty"),
-        ...me.inv.pockets.map((p, i) => slot(String(i + 1), p ? ITEMS[p].short : "―", p ? ITEMS[p].hint : "", p ? "" : "empty"))
+        ...me.inv.pockets.map((p, i) => slot(String(i + 1), p ? ITEMS[p].short : "―", p ? ITEMS[p].hint + "(長押しで落とす)" : "", p ? "" : "empty")),
+        ...me.inv.map || me.inv.walkie ? [el("div", { class: "slot gear" }, el("b", null, [me.inv.map ? "地図" : "", me.inv.walkie ? "無線機" : ""].filter(Boolean).join("・")), el("small", null, "ポケットの外"))] : []
       );
     }
   }
@@ -11479,6 +11544,12 @@ function pickup(a, it) {
       spawnItem(a.inv.weapon.type, p.x, p.z, { dur: a.inv.weapon.dur, ammo: a.inv.weapon.ammo });
     }
     a.inv.weapon = { type: it.type, dur: it.dur != null ? it.dur : def.dur, ammo: it.ammo };
+  } else if (def.kind === "gear") {
+    if (a.inv[it.type]) {
+      tell(a, `${def.name}はもう持っている`, "dim");
+      return false;
+    }
+    a.inv[it.type] = true;
   } else {
     const i = a.inv.pockets.indexOf(null);
     if (i < 0) {
@@ -11499,6 +11570,16 @@ function dropPart(a) {
   tell(a, `${ITEMS[a.inv.part].name}を置いた`, "dim");
   a.inv.part = null;
   sfxAt("drop", a.x, a.z, 8);
+}
+function dropPocket(a, i) {
+  const type = a.inv && a.inv.pockets[i];
+  if (!type || a.state !== "ok") return false;
+  const p = front(a, 0.7);
+  spawnItem(type, p.x, p.z);
+  a.inv.pockets[i] = null;
+  tell(a, `${ITEMS[type].name}を置いた`, "dim");
+  sfxAt("drop", a.x, a.z, 8);
+  return true;
 }
 function usePocket(a, i, aim) {
   const type = a.inv && a.inv.pockets[i];
@@ -11799,7 +11880,8 @@ function studentChoices(a, look) {
     if (def.kind === "part" && a.inv.part) label = `取りかえる: ${def.name}`;
     if (def.kind === "weapon" && a.inv.weapon) label = `持ちかえる: ${def.name}`;
     const full = def.kind === "pocket" && !a.inv.pockets.includes(null);
-    add(it.x, it.z, 1.5, full ? { label: `${def.name}(ポケットがいっぱい)`, fn: null } : { label, fn: () => pickup(a, it) }, null, 0.3);
+    const have = def.kind === "gear" && a.inv[it.type];
+    add(it.x, it.z, 1.5, full ? { label: `${def.name}(ポケットがいっぱい)`, fn: null } : have ? { label: `${def.name}(もう持っている)`, fn: null } : { label, fn: () => pickup(a, it) }, null, 0.3);
   }
   for (const h of W.hides) if (!h.occ) add(h.fx, h.fz, 1.25, { label: `かくれる: ${h.label}`, fn: () => enterHide(a, h) });
   for (const d of doors) {
@@ -11864,7 +11946,7 @@ var SHOCK = { swing: FEAR.hit, sickle: FEAR.sickle, trap: FEAR.trap };
 function damage(s, amt, why) {
   if (!alive(s) || s.kind === "killer") return;
   if (s.god) return;
-  amt *= Math.max(0.2, 1 + pm(s, "dmgTaken") / 100);
+  amt *= Math.max(0.05, 1 + pm(s, "dmgTaken") / 100);
   s.hp -= amt;
   if (SHOCK[why]) addShock(s, SHOCK[why] * (why === "swing" ? Math.min(1.4, amt / KILLER.swing) : 1));
   sfxAt("hurt", s.x, s.z, 30);
@@ -11913,9 +11995,13 @@ function dropEverything(s) {
   if (s.inv.part) drop(s.inv.part);
   if (s.inv.weapon && s.inv.weapon.type !== "gun") drop(s.inv.weapon.type, { dur: s.inv.weapon.dur });
   for (const p of s.inv.pockets) if (p) drop(p);
+  if (s.inv.map) drop("map");
+  if (s.inv.walkie) drop("walkie");
   s.inv.part = null;
   s.inv.weapon = null;
   s.inv.pockets = [null, null, null];
+  s.inv.map = false;
+  s.inv.walkie = false;
 }
 function killerSwing(k, heavy = false) {
   if (k.atk || k.lunge || k.missT > 0 || k.stun || k.getUp > 0 || k.grab || k.morphT > 0 || k.searchT > 0 || k.state !== "ok") return false;
@@ -12096,6 +12182,12 @@ function studentSwing(s, aim, heavy = false) {
   if (!s.inv || !s.inv.weapon || s.atk || s.state !== "ok" || s.act || s.vault || s.down || s.trip > 0 || s.trapped || s.swim) return false;
   if (s.inv.weapon.type === "gun" && s.inv.weapon.ammo > 0) return shootGun(s, aim);
   heavy = heavy || s.stance;
+  if (pm(s, "rapid") > 0) {
+    s.atk = { t: 0, dur: 0.1, hit: 0, done: false, heavy, rapid: true };
+    if (aim != null) s.rot = aim;
+    sfxAt("swing", s.x, s.z, 18, 0.6);
+    return true;
+  }
   const cost = heavy ? STANCE.heavyCost : STANCE.normalCost;
   if (s.stam < cost * 0.5) {
     tell(s, "スタミナが足りない", "dim");
@@ -12108,12 +12200,14 @@ function studentSwing(s, aim, heavy = false) {
   sfxAt("swing", s.x, s.z, 18);
   return true;
 }
+var atkReach = (s, heavy) => (heavy ? 2.5 : 2.25) * (1 + pm(s, "atkRange") / 100);
+var ATK_ANGLE = 1.05;
 function studentHit(s) {
   const k = G.killer;
   if (!k || k.state !== "ok") return;
   const heavy = !!s.atk.heavy;
   const d = dist(s, k);
-  if (d > (heavy ? 2.5 : 2.25) || Math.abs(angDiff(s.rot, angTo(s, k))) > 1.05) return;
+  if (d > atkReach(s, heavy) || Math.abs(angDiff(s.rot, angTo(s, k))) > ATK_ANGLE) return;
   const w = s.inv.weapon;
   if (!w) return;
   const def = ITEMS[w.type];
@@ -12127,7 +12221,7 @@ function studentHit(s) {
   let team = 0;
   for (const o of G.students) if (o !== s && o.state === "ok" && dist(o, s) < 10) team++;
   const mul = 1 + (pm(s, "wDmg") + (w.type === "axe" ? pm(s, "wDmgAxe") : pm(s, "wDmgNonAxe")) + team * pm(s, "wDmgTeam")) / 100;
-  const dmg = def.dmg * powerMul(s.st) * Math.max(0.3, mul) * (heavy ? STANCE.heavy : 1);
+  const dmg = def.dmg * powerMul(s.st) * Math.max(0.3, mul) * (heavy ? STANCE.heavy : 1) * Math.max(0.05, 1 + pm(s, "rapidDmg") / 100);
   hurtKiller(k, dmg, s);
   const presses = def.stun * KILLER.mashPer * (1 + (pm(s, "stun") + (w.type === "bat" ? pm(s, "batStun") : 0)) / 100) * (heavy ? STANCE.heavyStun : 1);
   if (stunKiller(k, presses, s, { big: heavy })) {
@@ -12185,8 +12279,9 @@ function dodge(s, dx, dz) {
     dz /= l;
   }
   const dur = STANCE.dodgeDur / (1 + pm(s, "dodge") / 100);
+  const far = STANCE.dodgeDist * (1 + pm(s, "dodgeDist") / 100);
   s.stam -= STANCE.dodgeCost;
-  s.dodge = { t: 0, dur, vx: dx * STANCE.dodgeDist / dur, vz: dz * STANCE.dodgeDist / dur };
+  s.dodge = { t: 0, dur, vx: dx * far / dur, vz: dz * far / dur };
   sfxAt("dodge", s.x, s.z, 12);
   return true;
 }
@@ -12210,8 +12305,9 @@ function stunKiller(k, presses, src, opt = {}) {
   if (k.stun) {
     if (canDown && !k.stun.down) {
       k.stun.down = true;
-      k.stun.left = Math.round(k.stun.left * KILLER.knockMul) + 4;
+      k.stun.left = Math.round(Math.max(k.stun.left, k.stun.fixed ? presses : 0) * KILLER.knockMul) + 4;
       k.stun.need = k.stun.left;
+      k.stun.fixed = 0;
       sfxAt("knock", k.x, k.z, 45);
       sayAll("カカシ男が地面にたおれた！", "good");
     }
@@ -12220,7 +12316,7 @@ function stunKiller(k, presses, src, opt = {}) {
   if (k.stunImm > 0 && !opt.force) return false;
   if (G.rage) presses *= 0.75;
   const need = Math.max(3, Math.round(presses * (canDown ? KILLER.knockMul : 1)));
-  k.stun = { left: need, need, t: 0, down: canDown };
+  k.stun = opt.fixed && !canDown ? { left: 0, need: 0, t: 0, down: false, fixed: opt.fixed } : { left: need, need, t: 0, down: canDown };
   k.stunT = 1;
   k.atk = null;
   k.lunge = null;
@@ -12234,12 +12330,12 @@ function stunKiller(k, presses, src, opt = {}) {
   if (k.grab) releaseGrab(k, true);
   sfxAt(canDown ? "knock" : "stun", k.x, k.z, 40);
   sayAll(canDown ? "カカシ男が地面にたおれた！" : "カカシ男がひるんだ！", "good");
-  tell(k, canDown ? "たおれた！ スペースを連打して起き上がれ！" : "ひるんだ！ スペースを連打しろ！", "bad");
+  tell(k, canDown ? "たおれた！ スペースを連打して起き上がれ！" : k.stun.fixed ? `ふりほどかれた！ ${k.stun.fixed} 秒動けない` : "ひるんだ！ スペースを連打しろ！", "bad");
   bus.emit("kstun", k, src);
   return true;
 }
 function killerMash(k) {
-  if (!k.stun) return;
+  if (!k.stun || k.stun.fixed) return;
   k.stun.left -= 1;
   tellSfx(k, "mash");
 }
@@ -12247,6 +12343,14 @@ function updateKillerStun(k, dt) {
   const st = k.stun;
   if (!st) return;
   st.t += dt;
+  if (st.fixed) {
+    if (st.t >= st.fixed) {
+      k.stun = null;
+      k.stunT = 0;
+      k.stunImm = KILLER.stunImm;
+    }
+    return;
+  }
   if (k.ctrl === "ai") st.left -= DIFF[G.diff].mash * dt * (0.85 + Math.random() * 0.3);
   if (st.sealing) st.left = Math.max(st.left, 3);
   if (st.left <= 0 && st.t >= KILLER.minStun) {
@@ -12510,7 +12614,7 @@ function updateCombat(dt) {
         const i = pocketIndex(s, "knife");
         if (i >= 0) s.inv.pockets[i] = null;
         releaseGrab(k, true);
-        stunKiller(k, 10, s, { force: true });
+        stunKiller(k, 10, s, { force: true, fixed: KILLER.escapeStun });
         sayAll(`${s.name}がナイフでふりほどいた！`, "good");
         return;
       }
@@ -12520,7 +12624,7 @@ function updateCombat(dt) {
       s.struggle += (s.ctrl === "ai" ? struggleRate(s.st) * (s.ai.skill || 1) * (0.7 + Math.random() * 0.6) : 3) * mul * dt;
       if (s.struggle >= 100) {
         releaseGrab(k, true);
-        stunKiller(k, 6, s, { force: true });
+        stunKiller(k, 6, s, { force: true, fixed: KILLER.escapeStun });
         sayAll(`${s.name}がふりほどいた！`, "good");
         return;
       }
@@ -12732,7 +12836,7 @@ function makeStudent(def, x, z, ctrl, perks = []) {
   a.flash = true;
   a.perks = perks;
   a.pm = modsOf(perks);
-  a.inv = { weapon: null, part: null, pockets: [null, null, null] };
+  a.inv = { weapon: null, part: null, pockets: [null, null, null], map: false, walkie: false };
   a.stamMax = 100 * (1 + (a.pm.stamMax || 0) / 100);
   a.stam = a.stamMax;
   const fl = makeFlashlight();
@@ -12750,7 +12854,7 @@ function makeHero(def, x, z, ctrl) {
   a.hero = true;
   a.flash = true;
   a.stamMax = 100;
-  a.inv = { weapon: { type: "gun", dur: 99, ammo: 1 }, part: null, pockets: ["knife", "spray", "map"] };
+  a.inv = { weapon: { type: "gun", dur: 99, ammo: 1 }, part: null, pockets: ["knife", "spray", null], map: true, walkie: false };
   const fl = makeFlashlight();
   rig.handL.add(fl);
   rig.flashMesh = fl;
@@ -12987,7 +13091,7 @@ function speedOf(a) {
   if (a.swim) s = 2 * (1 + pm(a, "swim") / 100);
   else if (a.crouch) s = 1.6 * (1 + pm(a, "crouchSpd") / 100);
   else if (a.sprinting) s = runSpeed(a.st) * (1 + pm(a, "sprint") / 100);
-  else s = walkSpeed(a.st);
+  else s = walkSpeed(a.st) * (1 + pm(a, "walk") / 100);
   if (a.stance && !a.swim) s *= STANCE.studentSpeed;
   if (a.hp < 40) s *= 0.82;
   if (a.slowT > 0) s *= 0.6;
@@ -13160,7 +13264,7 @@ function studentStats(a, dt, moving) {
     a.stam = max;
     a.exhausted = false;
   } else if (a.sprinting) {
-    a.stam -= staminaDrain(a.st) * dt;
+    a.stam -= staminaDrain(a.st) * dt / Math.max(0.02, 1 + pm(a, "sprintStam") / 100);
     if (a.stam <= 0) {
       a.stam = 0;
       a.exhausted = true;
@@ -13333,7 +13437,7 @@ var canSee = (a, b, range, fov = 1.3) => {
 // src/player.js
 import * as THREE9 from "three";
 var CAM = { yaw: Math.PI, pitch: 0.3, shake: 0, aimY: 0 };
-var PL = { choice: null, mapOpen: false, morph: false, spect: 0, ff: false, skill: null, hold: null };
+var PL = { choice: null, mapOpen: false, morph: false, spect: 0, ff: false, skill: null, hold: null, pk: null, hitbox: false };
 var camera2 = null;
 var tmp = new THREE9.Vector3();
 function initPlayer(cam) {
@@ -13371,6 +13475,13 @@ function initPlayer(cam) {
   bus.on("atkCancel", () => {
     PL.hold = null;
   });
+  bus.on("release", (a) => {
+    const h = PL.pk;
+    if (!h || h.fired || a !== "s" + (h.i + 1)) return;
+    PL.pk = null;
+    const me = G.me;
+    if (G.mode === "play" && !G.paused && me && me.kind !== "killer" && alive(me)) sendCmd({ k: "pocket", i: h.i, yaw: CAM.yaw, aimY: CAM.aimY });
+  });
 }
 var killerInput = () => G.mode === "play" && !G.paused && !PL.mapOpen && !IN.uiOpen && G.me && G.me.kind === "killer" && alive(G.me);
 function sendCmd(c) {
@@ -13389,7 +13500,7 @@ function onPress(a) {
   }
   const me = G.me;
   if (a === "map") {
-    if (me && me.kind !== "killer" && alive(me) && !(me.inv && me.inv.pockets.includes("map"))) {
+    if (me && me.kind !== "killer" && alive(me) && !(me.inv && me.inv.map)) {
       say("地図を持っていない(引き出しをさがそう)", "dim");
       return;
     }
@@ -13480,7 +13591,13 @@ function onPress(a) {
     case "s1":
     case "s2":
     case "s3":
-      sendCmd({ k: "pocket", i: +a[1] - 1, yaw, aimY });
+      PL.pk = { i: +a[1] - 1, t: 0, fired: false };
+      break;
+    case "hitbox":
+      if (pm(me, "hitbox") > 0) {
+        PL.hitbox = !PL.hitbox;
+        say(PL.hitbox ? "攻撃のとどく範囲を表示(I でけす)" : "攻撃の範囲をけした", "dim");
+      } else say("パーク「すばやさこそ正義」をつけていると、攻撃の範囲を表示できる", "dim");
       break;
     default:
       break;
@@ -13510,6 +13627,17 @@ function updatePlayer(dt) {
   if (PL.skill) {
     PL.skill.needle += PL.skill.speed * dt;
     if (PL.skill.needle > PL.skill.z1 + 0.12) resolveSkill(true);
+  }
+  if (PL.pk && !PL.pk.fired) {
+    const me0 = G.me;
+    if (!me0 || me0.kind === "killer" || !alive(me0)) PL.pk = null;
+    else {
+      PL.pk.t += dt;
+      if (PL.pk.t >= DROP_HOLD) {
+        PL.pk.fired = true;
+        sendCmd({ k: "dropp", i: PL.pk.i });
+      }
+    }
   }
   if (PL.hold && !PL.hold.fired) {
     if (!killerInput()) PL.hold = null;
@@ -13657,6 +13785,8 @@ var fireLight;
 var lampLights = [];
 var senseMarks = [];
 var bldGlows = [];
+var hitbox = null;
+var hitboxFan = null;
 var titleT = 0;
 var lampT = 0;
 var scareSeen = -99;
@@ -13718,6 +13848,14 @@ function boot() {
   }
   if (W.sp.rack) G.ksickles.push({ x: W.sp.rack.fx, z: W.sp.rack.fz, mesh: new THREE10.Group(), taken: false, n: 2 });
   setupObjectives(scene);
+  hitboxFan = new THREE10.Mesh(new THREE10.CircleGeometry(1, 28, -Math.PI / 2 - ATK_ANGLE, ATK_ANGLE * 2), new THREE10.MeshBasicMaterial({ color: 16765024, transparent: true, opacity: 0.22, depthWrite: false, side: THREE10.DoubleSide }));
+  hitboxFan.rotation.x = -Math.PI / 2;
+  hitboxFan.position.y = 0.06;
+  hitboxFan.renderOrder = 8;
+  hitbox = new THREE10.Group();
+  hitbox.add(hitboxFan);
+  hitbox.visible = false;
+  scene.add(hitbox);
   initInput(cv);
   initUI(camera3);
   initPlayer(camera3);
@@ -13987,11 +14125,11 @@ function startFromConfig(cfg, mode, self) {
         const i = a.inv.pockets.indexOf(null);
         if (i >= 0) a.inv.pockets[i] = t === "spray" && pm(a, "sprayTwice") ? "spray2" : t;
       };
-      if (pm(a, "startBat")) a.inv.weapon = { type: "bat", dur: 4 };
+      if (pm(a, "startBat")) a.inv.weapon = { type: "bat", dur: ITEMS.bat.dur };
       if (pm(a, "startSpray")) give("spray");
       if (pm(a, "startFire")) give("fire");
-      if (pm(a, "startMap")) give("map");
-      if (pm(a, "startWalkie")) give("walkie");
+      if (pm(a, "startMap")) a.inv.map = true;
+      if (pm(a, "startWalkie")) a.inv.walkie = true;
     }
   }
   G.nextId = Math.max(G.nextId, maxId + 1e3);
@@ -14186,6 +14324,17 @@ function render(dt) {
   });
   if (SET.admin) applyCheats();
   updateESP(camera3, scene);
+  const hm = G.me;
+  const showHit = PL.hitbox && G.mode === "play" && hm && hm === G.view && hm.kind !== "killer" && hm.state === "ok" && pm(hm, "hitbox") > 0;
+  hitbox.visible = !!showHit;
+  if (showHit) {
+    const r = atkReach(hm, hm.stance);
+    hitbox.position.set(hm.x, 0, hm.z);
+    hitbox.rotation.y = CAM.yaw;
+    hitboxFan.scale.set(r, r, 1);
+    hitboxFan.material.opacity = hm.atk ? 0.5 : 0.2;
+    hitboxFan.material.color.setHex(hm.stance ? 16740432 : 16765024);
+  }
   if (G.mode === "play") audioFrame(dt);
   else updateMusic(dt, { tension: 0.15, fear: 0, mode: "student", outside: true });
   updateHUD(dt);
