@@ -24,7 +24,7 @@
 - **カカシ男の種類**: 畑・走り・大鎌・霧・沼の 5 種類。それぞれ得意と苦手がある(帽子のリボンの色で分かる)
 - **とどめ 4 種類**: つかんだ後に 1〜4 で選ぶ(たたきつけ・つるし上げ・ふりまわし・鎌でとどめ)
 - **ひるみ**: カカシ男は 3 回ほど当てるとひるむ(ひるみゲージ)。ひるんでいる間は無敵。こうげきはカベごしには当たらない
-- **セリフ**: たおれた人を見た・カカシ男を見た・つかまれた・電話や無線(こわさで言い方が変わる)などで、キャラごとにちがうセリフを話す(字幕)
+- **セリフと声**: たおれた人を見た・カカシ男を見た・つかまれた・電話や無線(こわさで言い方が変わる)などで、キャラごとにちがう声でセリフを話す(字幕も出る。声の大きさは設定で変えられる)
 
 ## 操作(パソコン)
 
@@ -52,4 +52,4 @@ P2P なので、いっしょに遊ぶ人にはおたがいのネットの住所(
 - [Trystero](https://github.com/dmotz/trystero) 0.26.0(MIT)
 - 3D モデル(すべて CC0): [Kenney](https://kenney.nl/)(Blocky Characters・Survival Kit・Food Kit・Graveyard Kit・Pirate Kit)、[Quaternius](https://quaternius.com/)・Pichuliru・CreativeTrio([Poly Pizza](https://poly.pizza/) から)。設定で前の見た目(レガシー)にもどせます
 - 効果音と音楽はすべてその場で合成しています。名前と物語はオリジナルです。
-- セリフの声は [VOICEVOX](https://voicevox.hiroshiba.jp/) で作れるようにしてあります(今は字幕だけ)。声を入れた時は、タイトルと設定にクレジット「VOICEVOX:キャラ名」が出ます。
+- セリフの声: [VOICEVOX](https://voicevox.hiroshiba.jp/) で作りました。VOICEVOX:白上虎太郎・VOICEVOX:中部つるぎ・VOICEVOX:雀松朱司・VOICEVOX:四国めたん・VOICEVOX:玄野武宏・VOICEVOX:中国うさぎ・VOICEVOX:青山龍星・VOICEVOX:黒沢冴白・VOICEVOX:麒ヶ島宗麟
