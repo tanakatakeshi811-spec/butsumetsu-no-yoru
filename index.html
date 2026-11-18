@@ -11782,9 +11782,24 @@ function killerOpenDoor(k, d) {
 function pullDriver(k, v) {
   const s = v.seats.find((o) => o);
   if (!s) return false;
+  const on = v.state === "running" || v.state === "starting";
   leaveVehicle(s, true);
   grab(k, s);
   v.v = 0;
+  if (v.kind === "boat" && !v.seats[0]) {
+    const o = v.seats.find(Boolean);
+    if (o) {
+      v.seats[o.seat] = null;
+      v.seats[0] = o;
+      o.seat = 0;
+      if (on) {
+        v.state = "starting";
+        v.startT = 1;
+        v.waitT = 0;
+      }
+      tell(o, "運転する人がいなくなった！ W/A/D で赤いブイまで進め！", "warn");
+    }
+  }
   sayAll(`${s.name}が${v.name}から引きずり出された！`, "bad");
   return true;
 }
@@ -11884,14 +11899,22 @@ function killerChoices(k, look) {
     startGrab(k);
   } };
   for (const h of W.hides) add(h.fx, h.fz, 1.6, { label: `しらべる: ${h.label}`, fn: () => killerSearchHide(k, h) });
-  for (const v of G.vehicles) if (v.state !== "gone" && v.seats.some(Boolean) && (v.kind === "boat" || Math.abs(v.v) < 2.5)) add(
-    v.x,
-    v.z,
-    v.kind === "boat" ? 3 : 3.3,
-    // ボートは動いていても引きずり出せる
-    { label: `${v.name}から引きずり出す`, fn: () => pullDriver(k, v) },
-    0.5
-  );
+  for (const v of G.vehicles) {
+    if (v.state === "gone" || !v.seats.some(Boolean) || v.kind !== "boat" && Math.abs(v.v) >= 2.5) continue;
+    let px = v.x, pz = v.z;
+    if (v.kind !== "boat") {
+      let m = 99;
+      for (const o of [-1.4, 0, 1.4]) {
+        const qx = v.x + Math.sin(v.rot) * o, qz = v.z + Math.cos(v.rot) * o, d2 = Math.hypot(qx - k.x, qz - k.z);
+        if (d2 < m) {
+          m = d2;
+          px = qx;
+          pz = qz;
+        }
+      }
+    }
+    add(px, pz, 3, { label: `${v.name}から引きずり出す`, fn: () => pullDriver(k, v) }, 0.5);
+  }
   for (const d2 of doors) if (!d2.open && !d2.broken) add(d2.x, d2.z, 1.6, d2.barr ? { label: "バリケード(クリックでこわす)", fn: null } : { label: "ドアを開ける", fn: () => killerOpenDoor(k, d2) });
   for (const ks of G.ksickles) if (!ks.taken) add(ks.x, ks.z, 1.6, k.sickles >= km(k, "sickleMax", KILLER.sickleMax) ? { label: "投げ鎌はいっぱい", fn: null } : { label: "投げ鎌を拾う", fn: () => pickKSickle(k, ks) }, 0.3);
   const best = pickBest(C, k, look);
@@ -12569,6 +12592,7 @@ function moveTo(k, x, z, chase2 = false) {
 function thinkKiller(k) {
   const ai = k.ai, D2 = DIFF[G.diff];
   if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.grabTry || k.grabMissT > 0 || k.atk || k.lunge || k.missT > 0 || k.throwT > 0) return;
+  ai.boat = null;
   if ((k.blind || 0) >= 0.6) {
     ai.target = null;
     k.path = null;
@@ -12628,7 +12652,14 @@ function thinkKiller(k) {
   const boat = G.vehicles.find((v) => v.kind === "boat" && v.state !== "gone" && v.seats.some(Boolean));
   if (boat && dist(k, boat) < 70) {
     if (dist(k, boat) < 2.8) pullDriver(k, boat);
-    else moveTo(k, boat.x, boat.z, true);
+    else {
+      ai.boat = boat;
+      if (dist(k, boat) > 14) moveTo(k, boat.x, boat.z, true);
+      else {
+        k.path = null;
+        ai.direct = null;
+      }
+    }
     ai.lastInfo = G.t;
     return;
   }
@@ -12756,10 +12787,16 @@ function chase(k, s) {
   if (d > 22 && k.cd.stalk <= 0 && unlockLeft("stalk") <= 0 && Math.random() < 0.3) useStalk(k);
   moveTo(k, s.x, s.z, true);
 }
+var carGap = (k, v) => {
+  const fx2 = Math.sin(v.rot), fz = Math.cos(v.rot);
+  let m = 99;
+  for (const o of [-1.4, 0, 1.4]) m = Math.min(m, Math.hypot(v.x + fx2 * o - k.x, v.z + fz * o - k.z));
+  return m;
+};
 function interceptCar(k, car) {
   const ai = k.ai;
   const d = dist(k, car);
-  if (Math.abs(car.v) < 1.2 && d < 3.2) {
+  if (Math.abs(car.v) < 1.2 && (d < 3.2 || carGap(k, car) < 3)) {
     pullDriver(k, car);
     return;
   }
@@ -12767,6 +12804,7 @@ function interceptCar(k, car) {
     k.rot = angTo(k, car);
     k.mx = k.mz = 0;
     k.path = null;
+    ai.direct = null;
     k.stance = true;
     k.stanceT = 1.2;
     return;
@@ -12850,6 +12888,25 @@ function execKiller(k, dt) {
   if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.grabTry || k.grabMissT > 0 || k.atk && k.atk.lock || k.lunge || k.missT > 0 || k.throwT > 0) {
     k.mx = k.mz = 0;
     return;
+  }
+  const bt = ai.boat;
+  if (bt) {
+    if (bt.state === "gone" || !bt.seats.some(Boolean)) ai.boat = null;
+    else {
+      const d = dist(k, bt);
+      if (d < 2.8) {
+        k.mx = k.mz = 0;
+        ai.boat = null;
+        pullDriver(k, bt);
+        return;
+      }
+      if (d < 14) {
+        k.mx = (bt.x - k.x) / d;
+        k.mz = (bt.z - k.z) / d;
+        k.path = null;
+        return;
+      }
+    }
   }
   if (k.dashT > 0) {
     const t = ai.dashTo;
@@ -13520,7 +13577,7 @@ function applySnap(s) {
       }
     }
   }
-  for (const v of G.vehicles) v.seats = v.seats.map((o) => o && o.vehicle === v ? o : null);
+  for (const v of G.vehicles) v.seats = v.seats.map((o, i) => o && o.vehicle === v && o.seat === i ? o : null);
   doors.forEach((d, i) => {
     const c = +s.D[i];
     const wasOpen = d.open;
@@ -15736,7 +15793,8 @@ function updateVehicle(v, dt) {
       const full = !v.seats.includes(null);
       const coming = G.students.some((s) => s.state === "ok" && s.ai && s.ai.task && s.ai.task.type === "board" && s.ai.task.obj === v && dist(s, v) < 30);
       const humanNear = G.students.some((s) => (s.ctrl === "player" || s.ctrl === "remote") && s.state === "ok" && dist(s, v) < 22);
-      if (full || kd < 13 || v.waitT > 9 || !coming && !humanNear && v.waitT > 2.5) [thr, st] = aiDrive(v, dt);
+      const away = v.kind === "boat" && Math.hypot(v.x - W.dockEnd.x, v.z - W.dockEnd.z) > 6;
+      if (away || full || kd < 13 || v.waitT > 9 || !coming && !humanNear && v.waitT > 2.5) [thr, st] = aiDrive(v, dt);
     }
   }
   if (v.stall > 0) {
@@ -17833,7 +17891,7 @@ function updatePlayer(dt) {
       PL.eh.t += dt;
       if (PL.eh.t >= BARR_HOLD) {
         PL.eh.fired = true;
-        sendCmd({ k: "alt", yaw: CAM.yaw });
+        if (PL.choice && PL.choice.R && PL.choice.R.hold) sendCmd({ k: "alt", yaw: CAM.yaw });
       }
     }
   }
