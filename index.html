@@ -6341,6 +6341,16 @@ import * as THREE8 from "three";
 var state3 = 0;
 var M3 = null;
 var err = "";
+var HTTP_MSG = { 401: "合言葉が要る・ちがう(スマホなどトンネルの時だけ要る。同じ PC なら空のまま)", 403: "このページの場所は、中継に許可されていない", 404: "中継の PC にヤンちゃんの 3D がない", 429: "合言葉を何回もまちがえたので、しばらく待ってね" };
+function whyFail(e2) {
+  if (e2 && e2.name === "AbortError") return "中継が返事をしない(PC のコトダマ中継が動いているか確かめてね)";
+  if (e2 instanceof TypeError) {
+    if (location.protocol === "file:") return "ファイルをダブルクリックで開いたページからは、中継が読ませない(安全のため)。GitHub のページから開いてね";
+    if (!/(^|\.)github\.io$|^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return "このページの場所からは、中継が読ませない。GitHub のページから開いてね";
+    return "中継につながらない(PC のコトダマ中継が動いているか確かめてね。ブラウザに「ローカル ネットワーク」の許可を聞かれたら「許可」)";
+  }
+  return String(e2 && e2.message || e2);
+}
 var yanStatus = () => ({ state: state3, err });
 async function loadYan(force = false) {
   if (!SET.admin) {
@@ -6357,7 +6367,7 @@ async function loadYan(force = false) {
     const headers = SET.yanPass ? { "x-relay-key": SET.yanPass } : {};
     const get = async (f) => {
       const r = await fetch(base2 + f, { headers, signal: ac.signal, cache: "no-store" });
-      if (!r.ok) throw new Error(r.status === 401 ? "合言葉がちがう" : "http " + r.status);
+      if (!r.ok) throw new Error(HTTP_MSG[r.status] || "http " + r.status);
       return r;
     };
     const j = await (await get("yan.json")).json();
@@ -6415,7 +6425,7 @@ async function loadYan(force = false) {
   } catch (e2) {
     M3 = null;
     state3 = -1;
-    err = e2 && e2.name === "AbortError" ? "中継につながらない(PC のコトダマ中継が動いているか)" : String(e2 && e2.message || e2);
+    err = whyFail(e2);
   } finally {
     clearTimeout(tm);
   }
@@ -14181,7 +14191,7 @@ var cheatsAllowed = () => !!SET.admin && G.net === "solo";
 function yanRow(refresh) {
   const st = yanStatus();
   const urlIn = el("input", { type: "text", value: SET.yanUrl || "http://127.0.0.1:8787", "aria-label": "コトダマ中継の場所", spellcheck: "false" });
-  const passIn = el("input", { type: "password", value: SET.yanPass || "", placeholder: "合言葉(トンネルの時だけ)", autocomplete: "off", "aria-label": "中継の合言葉" });
+  const passIn = el("input", { type: "password", value: SET.yanPass || "", placeholder: "合言葉(同じ PC なら空のまま)", autocomplete: "off", "aria-label": "中継の合言葉" });
   const msg = st.state === 2 ? "読みこんだ(タイトルでヤンちゃんを選ぶと、この体で出る)" : st.state === 1 ? "読みこみ中…" : st.state === -1 ? "読めなかった: " + st.err + "(衣装「人間」で出る)" : "まだ読んでいない";
   const go = () => {
     SET.yanUrl = urlIn.value.trim() || "http://127.0.0.1:8787";
@@ -14195,7 +14205,7 @@ function yanRow(refresh) {
     { class: "adm-yan" },
     el("p", { class: "adm-l" }, "ヤンちゃんの 3D(コトダマ中継から)"),
     el("div", { class: "adm-row" }, urlIn, passIn, el("button", { class: "btn sm", onclick: go }, "読みこむ")),
-    el("p", { class: "dim" }, msg + "。3D はゲームから取り出した物なので、公開するファイルには入っていない。中継を動かしている PC だけで出る。")
+    el("p", { class: "dim" }, msg + "。3D はゲームから取り出した物なので、公開するファイルには入っていない。中継を動かしている PC だけで出る。ダブルクリックで開いたファイルでは読めないので、GitHub のページで使ってね。")
   );
 }
 function adminSection(refresh, openPerks) {
