@@ -675,6 +675,10 @@ var KILLER = {
   throwCd: 3.5,
   escapeStun: 2.3,
   // 学生につかみからぬけられると 2.3 秒動けない(連打では早まらない)
+  grabReach: 0.42,
+  grabRange: 2.1,
+  grabMiss: 0.45,
+  // つかむ時は手をのばして 0.42 秒たってからつかまえる(その時 2.1m 以内にいないと空ぶり・0.45 秒すき)
   grabLock: 0.5,
   // つかんでから 0.5 秒は、学生の連打もカカシ男のとどめも効かない
   killMash: 0.5,
@@ -3893,6 +3897,22 @@ function poseRig(rig, a, dt) {
         P4.armRx = -0.6;
         P4.lean = 0;
       }
+    } else if (a.grabTry) {
+      const g = a.grabTry;
+      if (g.net) g.t = (g.t || 0) + dt;
+      const p = Math.min(1, (g.t || 0) / 0.42), e2 = p * p * (3 - 2 * p);
+      P4.armLx = -0.3 - 1.25 * e2;
+      P4.armRx = -0.3 - 1.25 * e2;
+      P4.armLz = 0.25 - 0.3 * e2;
+      P4.armRz = -0.25 + 0.3 * e2;
+      P4.lean = 0.08 + 0.22 * e2;
+      P4.headX = 0.1 + 0.1 * e2;
+      P4.legLx = -0.35 * e2;
+      P4.legRx = 0.25 * e2;
+    } else if (a.grabMissT > 0) {
+      P4.armLx = -0.9;
+      P4.armRx = -0.9;
+      P4.lean = 0.25;
     }
     if (a.gest) gesturePose(P4, a);
     if (a.atk) attackPose(P4, a);
@@ -6108,6 +6128,7 @@ __export(combat_exports, {
   removeTrap: () => removeTrap,
   senseChance: () => senseChance,
   shootGun: () => shootGun,
+  startGrab: () => startGrab,
   startKill: () => startKill,
   studentSwing: () => studentSwing,
   stunKiller: () => stunKiller,
@@ -12339,6 +12360,7 @@ function studentChoices(a, look) {
 function killerChoices(k, look) {
   if (k.state !== "ok") return null;
   if (k.stun) return { E: { label: k.stun.down ? "たおれた！ 連打して起き上がれ" : "ひるんだ！ 連打しろ", fn: () => killerMash(k) }, mash: true };
+  if (k.grabTry || k.grabMissT > 0) return { E: null };
   if (k.grab) return { E: { label: "とどめ(クリック)", fn: null }, hint: k.killT != null ? KILLS[k.killType || 0].name : KILLS.map((o, i) => `${i + 1}:${o.name}`).join("  ") + "  (クリック・スペース = 1)", kill: k.killT == null };
   const C = [];
   const add = (x, z, r, E, pri) => {
@@ -12346,9 +12368,7 @@ function killerChoices(k, look) {
     if (d2 <= r) C.push({ x, z, d: d2, E, pri });
   };
   for (const s of G.students) if (s.state === "ok" && !s.vault && !s.dodge && meleeClear(k.x, k.z, s.x, s.z)) add(s.x, s.z, 1.9, { label: `つかむ: ${s.name}`, fn: () => {
-    k.rot = angTo(k, s);
-    k.dashT = 0;
-    grab(k, s);
+    startGrab(k, s);
   } }, 1);
   for (const h of W.hides) add(h.fx, h.fz, 1.6, { label: `しらべる: ${h.label}`, fn: () => killerSearchHide(k, h) });
   for (const v of G.vehicles) if (v.state !== "gone" && v.seats.some(Boolean) && Math.abs(v.v) < 2.5) add(v.x, v.z, v.kind === "boat" ? 3 : 3.3, { label: `${v.name}から引きずり出す`, fn: () => pullDriver(k, v) }, 0.5);
@@ -13027,7 +13047,7 @@ function moveTo(k, x, z, chase2 = false) {
 }
 function thinkKiller(k) {
   const ai = k.ai, D2 = DIFF[G.diff];
-  if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.atk || k.lunge || k.missT > 0 || k.throwT > 0) return;
+  if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.grabTry || k.grabMissT > 0 || k.atk || k.lunge || k.missT > 0 || k.throwT > 0) return;
   if ((k.blind || 0) >= 0.6) {
     ai.target = null;
     k.path = null;
@@ -13179,7 +13199,7 @@ function chase(k, s) {
     k.rot = angTo(k, s);
     k.path = null;
     const weak = s.trapped || s.trip > 0 || s.down || s.hp < 40 || s.exhausted;
-    if (Math.random() < (weak ? 0.85 : 0.4) && !s.vault && !s.dodge) grab(k, s);
+    if (Math.random() < (weak ? 0.85 : 0.4) && !s.vault && !s.dodge) startGrab(k, s);
     else killerSwing(k, weak && Math.random() < D2.heavy);
     return;
   }
@@ -13291,7 +13311,7 @@ function patrol(k) {
 function execKiller(k, dt) {
   const ai = k.ai;
   k.faceT = null;
-  if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.atk && k.atk.lock || k.lunge || k.missT > 0 || k.throwT > 0) {
+  if (k.stun || k.getUp > 0 || k.morphT > 0 || k.searchT > 0 || k.grab || k.grabTry || k.grabMissT > 0 || k.atk && k.atk.lock || k.lunge || k.missT > 0 || k.throwT > 0) {
     k.mx = k.mz = 0;
     return;
   }
@@ -13302,7 +13322,7 @@ function execKiller(k, dt) {
       if (d < 1.8 && meleeClear(k.x, k.z, t.x, t.z)) {
         k.dashT = 0;
         k.rot = angTo(k, t);
-        if (Math.random() < 0.55 && !t.dodge) grab(k, t);
+        if (Math.random() < 0.55 && !t.dodge) startGrab(k, t);
         else killerSwing(k);
         return;
       }
@@ -13750,6 +13770,7 @@ function flagsOf(a) {
     if (a.maskOff) f |= 8388608;
     if (a.lunge) f |= 16777216;
     if (a.missT > 0) f |= 33554432;
+    if (a.grabTry) f |= 67108864;
   }
   return f;
 }
@@ -13903,6 +13924,7 @@ function applySnap(s) {
       a.getUp = fl & 4194304 ? 0.5 : 0;
       a.lunge = fl & 16777216 ? a.lunge || { t: 0, dur: LUNGE.dur, net: true } : null;
       a.missT = fl & 33554432 ? a.missT > 0 ? a.missT : LUNGE.miss : 0;
+      a.grabTry = fl & 67108864 ? a.grabTry || { t: 0, net: true } : null;
       const mo = !!(fl & 8388608);
       if (mo && !a.maskOff) {
         const m = makeMaskDrop();
@@ -13927,7 +13949,7 @@ function applySnap(s) {
     a.vehicle = veh >= 0 ? G.vehicles[veh] : null;
     a.seat = seat;
     if (a.vehicle) a.vehicle.seats[seat] = a;
-    const locked = a.state !== "ok" || a.vault || a.down || a.trapped || a.trip || a.dodge || a.act && !a.act.move || a.kind === "killer" && (a.stun || a.getUp > 0 || a.searchT > 0 || a.morphT > 0 || a.grab || a.throwT > 0 || a.lunge || a.missT > 0 || a.atk && a.kind === "killer");
+    const locked = a.state !== "ok" || a.vault || a.down || a.trapped || a.trip || a.dodge || a.act && !a.act.move || a.kind === "killer" && (a.stun || a.getUp > 0 || a.searchT > 0 || a.morphT > 0 || a.grab || a.grabTry || a.grabMissT > 0 || a.throwT > 0 || a.lunge || a.missT > 0 || a.atk && a.kind === "killer");
     if (isMe && a.kind === "killer" && (a.lunge || a.missT > 0 || G.intro)) {
       a.tx = x;
       a.tz = z;
@@ -14918,7 +14940,7 @@ function equippedFor(charId) {
   return (PROF.eq[charId] || []).map((u) => PROF.owned.find((o) => o.u === u)).filter(Boolean).map((o) => ({ id: o.id, r: o.r }));
 }
 var KEYS_S = [["WASD", "歩く"], ["Shift", "走る(スタミナを使う)"], ["C", "しゃがむ(足音が出ない)"], ["E", `調べる・拾う・ドア・かくれる・乗る・窓(ふつうに乗りこえると約 ${VAULT.climb.toFixed(1)} 秒)`], ["走りながら E", `窓に飛びこむ(速いが、たおれて ${VAULT.getUp} 秒動けない。閉まった窓はケガ ${VAULT.glass})`], ["R", "バリケード・窓をそっと開ける"], ["左クリック", "武器でなぐる"], ["右クリック(長押し)", "構え: こうげきが 1.75 倍、スペースで回避"], ["1 2 3", "ポケットの道具を使う(長押しで落とす)"], ["I", "攻撃のとどく範囲(パーク「すばやさこそ正義」)"], ["F", "懐中電灯"], ["Z", "フラッシュライト(右クリック長押しで照らす。カカシ男の目に 0.5 秒で目くらまし。電池 1 本で 4 秒)"], ["G", "部品を置く"], ["スペース", "修理のタイミング"], ["E か Q(連打)", "つかまれた・トラバサミ(つかまれて 0.5 秒たってから。とどめの間も半分きく)"], ["Tab", "地図(地図を持っている時)"], ["Esc", "メニュー"]];
-var KEYS_K = [["WASD", "歩く"], ["左クリック", "鎌でこうげき(ドアや窓もこわす)"], ["左クリック長押し", `前に ${LUNGE.dist}m 飛びかかってこうげき(外すと ${LUNGE.miss} 秒たおれる)`], ["右クリック(長押し)", "構え: ガード。構えたままのこうげきは 1.75 倍"], ["E", "つかむ・ドアを開ける・かくれ場所を調べる・投げ鎌を拾う"], ["スペース", "とどめ / ひるんだら連打で起きる"], ["つかんだ後 1 2 3 4", `とどめを選ぶ(${KILLS.map((o) => o.name).join("・")})。クリック・スペースは 1。つかんで 0.5 秒たってから`], ["Shift / 2", "影走り"], ["Q / 3", "気配"], ["X / 4", "忍び足"], ["1", "霧渡り(地図で場所を選ぶ)"], ["F", "投げ鎌"], ["R", "トラバサミを置く(外だけ)"], ["Tab", "地図"], ["F1", "管理者メニュー(管理者モードの時)"]];
+var KEYS_K = [["WASD", "歩く"], ["左クリック", "鎌でこうげき(ドアや窓もこわす)"], ["左クリック長押し", `前に ${LUNGE.dist}m 飛びかかってこうげき(外すと ${LUNGE.miss} 秒たおれる)`], ["右クリック(長押し)", "構え: ガード。構えたままのこうげきは 1.75 倍"], ["E", "つかむ(手をのばして 0.42 秒たってからつかまえる。はなれる・回避で空ぶり)・ドアを開ける・かくれ場所を調べる・投げ鎌を拾う"], ["スペース", "とどめ / ひるんだら連打で起きる"], ["つかんだ後 1 2 3 4", `とどめを選ぶ(${KILLS.map((o) => o.name).join("・")})。クリック・スペースは 1。つかんで 0.5 秒たってから`], ["Shift / 2", "影走り"], ["Q / 3", "気配"], ["X / 4", "忍び足"], ["1", "霧渡り(地図で場所を選ぶ)"], ["F", "投げ鎌"], ["R", "トラバサミを置く(外だけ)"], ["Tab", "地図"], ["F1", "管理者メニュー(管理者モードの時)"]];
 function showHelp(back) {
   modal(el(
     "div",
@@ -15879,7 +15901,7 @@ function dropEverything(s) {
   s.inv.walkie = false;
 }
 function killerSwing(k, heavy = false) {
-  if (k.atk || k.lunge || k.missT > 0 || k.stun || k.getUp > 0 || k.grab || k.morphT > 0 || k.searchT > 0 || k.state !== "ok") return false;
+  if (k.atk || k.lunge || k.missT > 0 || k.stun || k.getUp > 0 || k.grab || k.grabTry || k.grabMissT > 0 || k.morphT > 0 || k.searchT > 0 || k.state !== "ok") return false;
   heavy = heavy || k.stance;
   k.atk = heavy ? { t: 0, dur: 0.95, hit: 0.5, done: false, lock: true, heavy: true } : { t: 0, dur: 0.62, hit: 0.27, done: false, lock: true };
   k.dashT = 0;
@@ -15921,7 +15943,7 @@ function killerHit(k) {
   if (w && w.state !== "broken") breakWindow(w);
 }
 function killerLunge(k, heavy = false) {
-  if (k.state !== "ok" || k.atk || k.lunge || k.missT > 0 || k.stun || k.getUp > 0 || k.grab || k.killT != null || k.morphT > 0 || k.searchT > 0 || k.throwT > 0 || k.swim) return false;
+  if (k.state !== "ok" || k.atk || k.lunge || k.missT > 0 || k.stun || k.getUp > 0 || k.grab || k.grabTry || k.grabMissT > 0 || k.killT != null || k.morphT > 0 || k.searchT > 0 || k.throwT > 0 || k.swim) return false;
   if (k.lungeCd > 0) {
     tell(k, `飛びかかりはあと ${Math.ceil(k.lungeCd)} 秒できない`, "dim");
     return false;
@@ -16214,6 +16236,8 @@ function stunKiller(k, presses, src, opt = {}) {
   k.stance = false;
   k.path = null;
   if (k.grab) releaseGrab(k, true);
+  k.grabTry = null;
+  k.grabMissT = 0;
   sfxAt(canDown ? "knock" : "stun", k.x, k.z, 40);
   sayAll(canDown ? "カカシ男が地面にたおれた！" : "カカシ男がひるんだ！", "good");
   tell(k, canDown ? "たおれた！ スペースを連打して起き上がれ！" : k.stun.fixed ? `ふりほどかれた！ ${k.stun.fixed} 秒動けない` : "ひるんだ！ スペースを連打しろ！", "bad");
@@ -16245,6 +16269,39 @@ function updateKillerStun(k, dt) {
     k.stunImm = KILLER.stunImm;
     if (st.down) k.getUp = 0.7;
   }
+}
+function startGrab(k, s) {
+  if (!k || !s || k.state !== "ok" || k.grab || k.grabTry || k.grabMissT > 0 || k.stun || k.getUp > 0 || k.atk || k.lunge || k.missT > 0 || k.searchT > 0 || k.morphT > 0 || k.throwT > 0) return false;
+  k.grabTry = { s, t: 0 };
+  k.mx = k.mz = 0;
+  k.path = null;
+  k.dashT = 0;
+  k.stance = false;
+  k.rot = Math.atan2(s.x - k.x, s.z - k.z);
+  sfxAt("swing", k.x, k.z, 14);
+  return true;
+}
+function grabTick(k, dt) {
+  if (k.grabMissT > 0) k.grabMissT -= dt;
+  const g = k.grabTry;
+  if (!g) return;
+  const s = g.s;
+  if (k.state !== "ok" || k.stun) {
+    k.grabTry = null;
+    return;
+  }
+  g.t += dt;
+  if (s && s.state === "ok") k.rot = Math.atan2(s.x - k.x, s.z - k.z);
+  if (g.t < KILLER.grabReach) return;
+  k.grabTry = null;
+  const d = s ? Math.hypot(s.x - k.x, s.z - k.z) : 99;
+  if (s && s.state === "ok" && !s.vault && !s.dodge && d <= KILLER.grabRange && meleeClear(k.x, k.z, s.x, s.z)) {
+    grab(k, s);
+    return;
+  }
+  k.grabMissT = KILLER.grabMiss;
+  tell(k, "つかみそこねた！", "dim");
+  if (s && s.state === "ok") tell(s, "つかみをよけた！", "good");
 }
 function grab(k, s) {
   if (s.god) return false;
@@ -16492,6 +16549,7 @@ function updateCombat(dt) {
     }
     if (a.atk.t >= a.atk.dur) a.atk = null;
   }
+  if (k) grabTick(k, dt);
   if (k && k.grab) {
     const g = k.grab, s = g.s;
     g.t += dt;
@@ -16819,7 +16877,7 @@ function place(a, x, z) {
 function busy(a) {
   if (a.state !== "ok") return true;
   if (a.vault || a.down || a.trip > 0 || a.trapped || a.dodge || a.act && !a.act.move) return true;
-  if (a.kind === "killer") return !!(a.stun || a.getUp > 0 || a.atk && a.atk.lock || a.lunge || a.missT > 0 || a.killT != null || a.morphT > 0 || a.searchT > 0 || a.throwT > 0 || a.grab);
+  if (a.kind === "killer") return !!(a.stun || a.getUp > 0 || a.atk && a.atk.lock || a.lunge || a.missT > 0 || a.killT != null || a.morphT > 0 || a.searchT > 0 || a.throwT > 0 || a.grab || a.grabTry || a.grabMissT > 0);
   return false;
 }
 function startAct(a, type, dur, o = {}) {
