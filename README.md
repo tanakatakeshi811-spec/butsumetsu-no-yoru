@@ -25,6 +25,10 @@
 - **とどめ 4 種類**: つかんだ後に 1〜4 で選ぶ(たたきつけ・つるし上げ・ふりまわし・鎌でとどめ)
 - **ひるみ**: カカシ男は 3 回ほど当てるとひるむ(ひるみゲージ)。ひるんでいる間は無敵。こうげきはカベごしには当たらない
 - **セリフと声**: たおれた人を見た・カカシ男を見た・つかまれた・電話や無線(こわさで言い方が変わる)などで、キャラごとにちがう声でセリフを話す(字幕も出る。声の大きさは設定で変えられる)
+- **血**: 当たると青い血が飛び散る(血は全部青)
+- **衣装**: 自分の学生・カカシ男の見た目を「人間 / ブロック / レガシー」から選べる。クイックプレイでも相手に同じ衣装で見える
+- **フラッシュライト**: Z でモード、右クリック長押しで照らす。こちらを向いたカカシ男の目に 0.5 秒当てると真っ白で見えなくなる。電池(1 本 4 秒)はマップにときどき出る(2 本まで)
+- **つかみ**: つかまれて 0.5 秒はどちらも何もできない。そのあと E か Q を連打。とどめの間もぬけられる。マクロのような連打は弱める
 - **リク(コトダマ)**: 学生のリクは、アプリ「コトダマ」のリクの 3D。場面に合わせて顔の表情が変わる(こわい・痛い・つかまれた・こうげき・部品を拾った など 17 種類)。まばたきと、セリフに合わせた口パクもする。ひじ・ひざも動きに合わせて曲がる
 
 ## 操作(パソコン)
@@ -51,6 +55,6 @@ P2P なので、いっしょに遊ぶ人にはおたがいのネットの住所(
 
 - [three.js](https://threejs.org/) r160(MIT)
 - [Trystero](https://github.com/dmotz/trystero) 0.26.0(MIT)
-- 3D モデル(すべて CC0): [Kenney](https://kenney.nl/)(Blocky Characters・Survival Kit・Food Kit・Graveyard Kit・Pirate Kit)、[Quaternius](https://quaternius.com/)・Pichuliru・CreativeTrio([Poly Pizza](https://poly.pizza/) から)。設定で前の見た目(レガシー)にもどせます。リクの 3D と表情の絵は、作者のアプリ「コトダマ」のオリジナルです
+- 3D モデル(すべて CC0): [Kenney](https://kenney.nl/)(Blocky Characters・Survival Kit・Food Kit・Graveyard Kit・Pirate Kit)、[Quaternius](https://quaternius.com/)・Pichuliru・CreativeTrio([Poly Pizza](https://poly.pizza/) から)。設定で前の見た目(レガシー)にもどせます。カカシ男の頭: [Scarecrow](https://poly.pizza/m/7qFs_DjjuVp) by Poly by Google(CC-BY 3.0)。リクの 3D と表情の絵は、作者のアプリ「コトダマ」のオリジナルです
 - 効果音と音楽はすべてその場で合成しています。名前と物語はオリジナルです。
 - セリフの声: [VOICEVOX](https://voicevox.hiroshiba.jp/) で作りました。VOICEVOX:白上虎太郎・VOICEVOX:中部つるぎ・VOICEVOX:雀松朱司・VOICEVOX:四国めたん・VOICEVOX:玄野武宏・VOICEVOX:中国うさぎ・VOICEVOX:青山龍星・VOICEVOX:黒沢冴白・VOICEVOX:麒ヶ島宗麟
