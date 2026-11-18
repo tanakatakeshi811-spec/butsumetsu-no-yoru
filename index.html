@@ -586,7 +586,7 @@ var STUDENTS = [
     sex: "f",
     name: "ヤンちゃん",
     tag: "管理者",
-    note: "先輩がだいすきな後輩。足音が小さく、こわがらない。こうげきすると「病み」の顔になる。(管理者モードだけ・3D はコトダマ中継から)",
+    note: "管理者モードだけの学生。足音が小さく、こわがらない。(3D は PC のコトダマ中継から読む。公開ファイルには入っていない)",
     shirt: 1842214,
     pants: 2757656,
     hair: 1182732,
@@ -6585,7 +6585,7 @@ var PERKS = [
   P("thrasher", "オノ使い", [e("wDmgAxe", 10, 40, "オノのダメージが {v}% 強い")], [e("wDmgNonAxe", -10, -3, "オノ以外の武器のダメージが {v}% 弱い")]),
   P("psychic", "第六感", [e("startWalkie", 1, 1, "トランシーバーを持って始まる")], [e("noise", 12, 3, "出す音が {v}% 大きい")]),
   P("pyro", "花火好き", [e("flareStun", 10, 40, "信号銃でひるませる力が {v}% 強い")], [e("fear", 10, 3, "こわさが {v}% たまりやすい")]),
-  // ここから下は、しゅんりさんが考えたパーク(レア度に関係なく同じ強さ)
+  // ここから下は、オリジナルのパーク(レア度に関係なく同じ強さ)
   P("speedjustice", "すばやさこそ正義", [e("rapid", 1, 1, "攻撃ボタンを押すたびに、すぐ当たる(連打できる)。攻撃でスタミナを使わない"), e("dodgeDist", 65, 65, "回避で動く距離が 1.65 倍"), e("atkRange", 134, 134, "攻撃のとどく距離が 2.34 倍"), e("hitbox", 1, 1, "I キー(スマホは「範囲」)で、攻撃のとどく範囲を表示できる"), e("dur", 2900, 2900, "武器の耐久力が 3000%(30 倍)")], [e("rapidDiv", 36, 36, "武器のダメージが 36 分の 1")]),
   P("meathead", "脳筋で何が悪い", [e("wDmg", 120, 120, "武器のダメージが {v}% 強い(2.2 倍)"), e("stun", 120, 120, "ひるませる力が {v}% 強い(2.2 倍)")], [e("fear", 100, 100, "こわさが {v}% たまりやすい(2 倍)")]),
   P("meatwall", "肉壁", [e("dmgTaken", -90, -90, "受けるダメージが {v}% へる"), e("walk", 45, 45, "歩く速さが {v}% 速い"), e("sprint", 40, 40, "走る速さが {v}% 速い")], [e("sprintStam", -95, -95, "走るためのスタミナが {v}% へる(走れる時間が 20 分の 1)")])
@@ -14812,7 +14812,7 @@ function showBotPerks(back) {
       BP.mode = id;
       re();
     } }, n))),
-    el("div", { class: "chips" }, STUDENTS.map((s) => el("button", { class: "chip" + (bpChar === s.id ? " on" : ""), title: summary(s.id), onclick: () => {
+    el("div", { class: "chips" }, STUDENTS.filter((s) => !s.admin).map((s) => el("button", { class: "chip" + (bpChar === s.id ? " on" : ""), title: summary(s.id), onclick: () => {
       bpChar = s.id;
       re();
     } }, s.name))),
@@ -14823,7 +14823,7 @@ function showBotPerks(back) {
       { class: "m-btns left" },
       el("button", { class: "btn primary", onclick: () => {
         const src = set.map((o) => o ? { id: o.id, r: o.r } : null);
-        for (const s of STUDENTS) BP.sets[s.id] = src.map((o) => o ? { ...o } : null);
+        for (const s of STUDENTS.filter((o) => !o.admin)) BP.sets[s.id] = src.map((o) => o ? { ...o } : null);
         BP.mode = "custom";
         re(`全員を ${name} と同じにした`);
       } }, `全員を ${name} と同じにする`),
@@ -14833,7 +14833,7 @@ function showBotPerks(back) {
       } }, "全員なしにする")
     ),
     el("p", { class: "dim bp-msg" }, ""),
-    el("ul", { class: "bp-list" }, STUDENTS.map((s) => el("li", null, el("b", null, s.name), " ", summary(s.id)))),
+    el("ul", { class: "bp-list" }, STUDENTS.filter((s) => !s.admin).map((s) => el("li", null, el("b", null, s.name), " ", summary(s.id)))),
     el("div", { class: "m-btns" }, el("button", { class: "btn", onclick: () => {
       closeModal();
       if (back) back();
