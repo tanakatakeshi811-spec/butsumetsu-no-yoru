@@ -644,11 +644,25 @@ var KILLER = {
   carry: 2.3,
   dashSpeed: 10.5 * 1.5,
   stanceSpeed: 0.55,
-  swimSpeed: 0.7,
+  swimSpeed: 7,
+  // 水の中は 700%
   swing: 20,
-  sickleDmg: 25,
+  sickleDmg: 25 * 1.15,
   trapDmg: 40,
-  // ふつうの学生は 5 回、投げ鎌は 4 回、ワナは 3 回でやられる
+  // ふつうの学生は 5 回、投げ鎌は 4 回(前より 15% 強い)、ワナは 3 回でやられる
+  sickleSlow: 1.45,
+  sickleSlowMul: 0.25,
+  sicklePick: 2,
+  // 投げ鎌が当たると 1.45 秒 足が 75% おそくなる。拾うと 1 回で 2 本
+  atkSlow: 0.5,
+  atkSlowMul: 0.55,
+  // こうげきしても止まらない。押してから 0.5 秒だけ足が 45% おそくなる
+  glassR: 2,
+  glassNear: 20,
+  glassVault: 30,
+  // カカシ男が窓をわると、2m 以内の学生にガラスが刺さる(乗りこえ中の学生はもっと痛い)
+  carHits: 3,
+  // 車は 3 回こうげきするとこわれる(乗っている人は外へ・部品が 1 つ外れる)
   sickles: 2,
   sickleMax: 4,
   traps: 5,
@@ -675,10 +689,11 @@ var KILLER = {
   throwCd: 3.5,
   escapeStun: 2.3,
   // 学生につかみからぬけられると 2.3 秒動けない(連打では早まらない)
-  grabReach: 0.42,
-  grabRange: 2.1,
+  grabDur: 0.5,
+  grabFwd: 1,
+  grabR: 0.6,
   grabMiss: 0.45,
-  // つかむ時は手をのばして 0.42 秒たってからつかまえる(その時 2.1m 以内にいないと空ぶり・0.45 秒すき)
+  // E: 0.5 秒のあいだ、前 1m の所の半径 60cm に入った人をつかまえる(回避でよけられる。だれもいなければ 0.45 秒すき)
   grabLock: 0.5,
   // つかんでから 0.5 秒は、学生の連打もカカシ男のとどめも効かない
   killMash: 0.5,
@@ -743,9 +758,9 @@ var KILLS = [
 var callTime = (fear) => fear < FEAR.lv[1] ? 10 : 15 + 5 * Math.min(1, (fear - FEAR.lv[1]) / (100 - FEAR.lv[1]));
 var INTRO = { dur: 10.2, walk: 2.4, grab: 5, push: 6.3, burn: 6.9, react: 7.7, control: 8.3, vanish: 8.9 };
 var DROP_HOLD = 0.5;
-var VAULT = { climb: 0.85 / 2.25 * 6.7, open: 0.25, dive: 0.45, getUp: 3.5, glass: 8 * 3 * 2, openDiv: 3.5, stagger: 3.5, diveStagger: 0.2 };
+var VAULT = { climb: 0.85 / 2.25 * 6.7, open: 0.25, dive: 0.45, getUp: 4.9, fastDiv: 3, fastR: 20, glass: 8 * 3 * 2, openDiv: 3.5, stagger: 3.5, diveStagger: 0.2 };
 var WIN_LIFT = 0.8;
-var LUNGE = { hold: 0.35, dist: 5, dur: 0.42, reach: 1.35, miss: 0.7, cd: 5 };
+var LUNGE = { hold: 0.35, dist: 6, dur: 0.42, reach: 1.35 * 1.2, miss: 0.7, cd: 5, dmg: 0.55 };
 var FLASH = {
   drain: 25,
   // 照らしている間、1 秒に電池 25% へる(1 本で 4 秒)
@@ -3900,7 +3915,7 @@ function poseRig(rig, a, dt) {
     } else if (a.grabTry) {
       const g = a.grabTry;
       if (g.net) g.t = (g.t || 0) + dt;
-      const p = Math.min(1, (g.t || 0) / 0.42), e2 = p * p * (3 - 2 * p);
+      const p = Math.min(1, (g.t || 0) / 0.16), e2 = p * p * (3 - 2 * p);
       P4.armLx = -0.3 - 1.25 * e2;
       P4.armRx = -0.3 - 1.25 * e2;
       P4.armLz = 0.25 - 0.3 * e2;
@@ -6105,6 +6120,7 @@ __export(combat_exports, {
   atkReach: () => atkReach,
   breakDoor: () => breakDoor,
   breakWindow: () => breakWindow,
+  carInFront: () => carInFront,
   damage: () => damage,
   die: () => die,
   dodge: () => dodge,
@@ -6116,6 +6132,7 @@ __export(combat_exports, {
   flashAt: () => flashAt,
   grab: () => grab,
   guarding: () => guarding,
+  hitCar: () => hitCar,
   hitDoor: () => hitDoor,
   hurtKiller: () => hurtKiller,
   killerLunge: () => killerLunge,
@@ -6144,6 +6161,31 @@ __export(combat_exports, {
   useSense: () => useSense,
   useStalk: () => useStalk,
   windowInFront: () => windowInFront
+});
+
+// src/objectives.js
+var objectives_exports = {};
+__export(objectives_exports, {
+  KILLER: () => KILLER,
+  board: () => board,
+  boardSpot: () => boardSpot,
+  callPolice: () => callPolice,
+  canSeal: () => canSeal,
+  carSpot: () => carSpot,
+  escape: () => escape,
+  installPart: () => installPart,
+  isNeeded: () => isNeeded,
+  leaveVehicle: () => leaveVehicle,
+  objectiveCands: () => objectiveCands,
+  partTargets: () => partTargets,
+  ready: () => ready2,
+  resetObjectives: () => resetObjectives,
+  sealKiller: () => sealKiller,
+  setupObjectives: () => setupObjectives,
+  syncVehicles: () => syncVehicles,
+  updateObjectives: () => updateObjectives,
+  useRadio: () => useRadio,
+  vehicleLabel: () => vehicleLabel
 });
 
 // src/voicelines.js
@@ -6306,7 +6348,7 @@ var VOICE_CREDIT = [...new Set(Object.values(CAST).map((c) => "VOICEVOX:" + c.vv
 var clipId = (who, key, i) => `${who}.${key}.${i}`;
 
 // src/ui.js
-import * as THREE13 from "three";
+import * as THREE12 from "three";
 
 // src/mash.js
 var mash_exports = {};
@@ -11081,7 +11123,7 @@ var defaultRelayUrls = [
 ].map((url) => "wss://" + url);
 
 // src/net.js
-import * as THREE11 from "three";
+import * as THREE10 from "three";
 
 // src/intro.js
 var c01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -11280,7 +11322,7 @@ __export(interact_exports, {
   usePocket: () => usePocket,
   vault: () => vault
 });
-import * as THREE10 from "three";
+import * as THREE9 from "three";
 
 // src/flashlight.js
 function toggleFlMode(a) {
@@ -11396,539 +11438,6 @@ function beamDebug(a, k) {
   return { d: +d.toFixed(2), ang: +(Math.acos(Math.min(1, (vx * b.dx + vy * b.dy + vz * b.dz) / d)) * 57.3).toFixed(1), face: +(Math.abs(angDiff(k.rot, Math.atan2(a.x - k.x, a.z - k.z))) * 57.3).toFixed(0), sight: sightClear(a.x, a.z, k.x, k.z), look: +(a.look || 0).toFixed(2), aimY: +(a.aimY || 0).toFixed(2), krot: +k.rot.toFixed(2) };
 }
 
-// src/objectives.js
-var objectives_exports = {};
-__export(objectives_exports, {
-  KILLER: () => KILLER,
-  board: () => board,
-  boardSpot: () => boardSpot,
-  callPolice: () => callPolice,
-  canSeal: () => canSeal,
-  carSpot: () => carSpot,
-  escape: () => escape,
-  installPart: () => installPart,
-  isNeeded: () => isNeeded,
-  leaveVehicle: () => leaveVehicle,
-  objectiveCands: () => objectiveCands,
-  partTargets: () => partTargets,
-  ready: () => ready2,
-  resetObjectives: () => resetObjectives,
-  sealKiller: () => sealKiller,
-  setupObjectives: () => setupObjectives,
-  syncVehicles: () => syncVehicles,
-  updateObjectives: () => updateObjectives,
-  useRadio: () => useRadio,
-  vehicleLabel: () => vehicleLabel
-});
-import * as THREE9 from "three";
-var HOW = { car: "車", truck: "トラック", boat: "ボート", police: "警察の車" };
-var SEATS = {
-  car: [[-0.42, 0.15], [0.42, 0.15], [-0.42, -1], [0.42, -1]],
-  truck: [[-0.42, 0.85], [0.42, 0.85]],
-  boat: [[0, -1.25], [0, 0.35]]
-};
-function newVehicle(o) {
-  return Object.assign({ v: 0, steer: 0, state: "parked", stall: 0, waitT: 0, route: null, ri: 0, startT: 0, stuckT: 0, revT: 0, goneT: 0 }, o);
-}
-function setupObjectives(scene2) {
-  const car = newVehicle({ id: 0, kind: "car", model: "car", name: "車", spot: W.carSpot, parts: { key: false, battery: false, gas: false }, seats: [null, null, null, null], mesh: makeCar(), routes: ["n", "w"] });
-  const truck = newVehicle({ id: 1, kind: "car", model: "truck", name: "トラック", spot: W.car2Spot, parts: { key: false, battery: false, gas: false }, seats: [null, null], mesh: makeTruck(), routes: ["n2", "w2"] });
-  const boat = newVehicle({ id: 2, kind: "boat", model: "boat", name: "ボート", spot: W.boatSpot, parts: { gas: false, prop: false }, seats: [null, null], mesh: makeBoat() });
-  for (const v of [car, truck, boat]) {
-    Object.assign(v, { x: v.spot.x, z: v.spot.z, rot: v.spot.rot });
-    v.mesh.position.set(v.x, 0, v.z);
-    v.mesh.rotation.y = v.rot;
-    scene2.add(v.mesh);
-  }
-  for (const v of [car, truck]) {
-    const hl = new THREE9.SpotLight(16773328, 0, 45, 0.5, 0.5, 1);
-    hl.position.set(0, 0.9, 2.2);
-    hl.target.position.set(0, 0, 14);
-    v.mesh.add(hl, hl.target);
-    v.light = hl;
-  }
-  G.vehicles = [car, truck, boat];
-  const pc = makePoliceCar();
-  pc.visible = false;
-  scene2.add(pc);
-  const pl = new THREE9.PointLight(16719904, 0, 30, 1);
-  pl.position.y = 2.5;
-  scene2.add(pl);
-  G.phone = { fuse: false, called: false, eta: 0, arrived: false, exit: null, zone: null, mesh: pc, light: pl };
-  G.radio = { used: false, t: 0, readyT: -1 };
-}
-function resetObjectives() {
-  for (const v of G.vehicles) {
-    Object.assign(v, { x: v.spot.x, z: v.spot.z, rot: v.spot.rot, v: 0, steer: 0, state: "parked", stall: 0, waitT: 0, route: null, ri: 0, startT: 0, stuckT: 0, revT: 0, goneT: 0 });
-    for (const k in v.parts) v.parts[k] = false;
-    v.seats.fill(null);
-    v.mesh.visible = true;
-    if (v.mesh.userData.prop) v.mesh.userData.prop.visible = false;
-    if (v.light) {
-      v.light.intensity = 0;
-      v.mesh.userData.headMat.emissive.setHex(0);
-    }
-  }
-  Object.assign(G.phone, { fuse: false, called: false, eta: 0, arrived: false, exit: null, zone: null });
-  G.phone.mesh.visible = false;
-  G.phone.light.intensity = 0;
-  Object.assign(G.radio, { used: false, t: 0, readyT: -1 });
-  if (W.sp.fusebox && W.sp.fusebox.mesh.userData.lampOff) W.sp.fusebox.mesh.userData.lamp.material = W.sp.fusebox.mesh.userData.lampOff;
-}
-var ready2 = (v) => Object.values(v.parts).every(Boolean);
-function partTargets(type, from) {
-  const L4 = [];
-  for (const v of G.vehicles) {
-    if (v.state === "gone" || v.parts[type] !== false) continue;
-    const p = v.kind === "boat" ? { x: W.dockEnd.x, z: W.dockEnd.z } : carSpot(v, from || v);
-    L4.push({ obj: v, x: p.x, z: p.z });
-  }
-  if (type === "fuse" && !G.phone.fuse && W.sp.fusebox) L4.push({ obj: "fusebox", x: W.sp.fusebox.fx, z: W.sp.fusebox.fz });
-  return L4;
-}
-function isNeeded(type) {
-  if (type === "charm") return !!G.killer && G.killer.state === "ok";
-  return partTargets(type).length > 0;
-}
-function carSpot(c, from) {
-  const fx2 = Math.sin(c.rot), fz = Math.cos(c.rot), rx = -fz, rz = fx2;
-  const cand = [[rx * 1.85, rz * 1.85], [-rx * 1.85, -rz * 1.85], [fx2 * 2.9, fz * 2.9], [-fx2 * 2.9, -fz * 2.9]];
-  let best = null, bd = 1e9;
-  for (const [ox, oz] of cand) {
-    const x = c.x + ox, z = c.z + oz;
-    if (!freeAt(x, z, 0.3, "dry")) continue;
-    const d = Math.hypot(x - from.x, z - from.z);
-    if (d < bd) {
-      bd = d;
-      best = { x, z };
-    }
-  }
-  return best || snapFree(c.x + rx * 2, c.z + rz * 2, 0.3, 6);
-}
-function boardSpot(v, from) {
-  return v.kind === "boat" ? { x: W.dockEnd.x, z: W.dockEnd.z } : carSpot(v, from);
-}
-function installPart(a, obj) {
-  const type = a.inv && a.inv.part;
-  if (!type) return false;
-  if (obj === "fusebox" ? type !== "fuse" || G.phone.fuse : obj.parts[type] !== false) return false;
-  const dur = (3.4 - (a.st.repair || 5) * 0.12) / Math.max(0.3, 1 + pm(a, "repair") / 100);
-  if (obj !== "fusebox") a.rot = Math.atan2(obj.x - a.x, obj.z - a.z);
-  startAct(a, "install", dur, { checks: repairChecks(a.st), done: () => {
-    if (a.inv.part !== type) return;
-    if (obj === "fusebox") {
-      if (G.phone.fuse) return;
-      G.phone.fuse = true;
-      const lamp = W.sp.fusebox.mesh.userData.lamp;
-      W.sp.fusebox.mesh.userData.lampOff = lamp.material;
-      lamp.material = new THREE9.MeshLambertMaterial({ color: 4259680, emissive: 2146368 });
-      sayAll(`${a.name}が配電盤にヒューズをつけた。管理棟の電話が使える！`, "good");
-    } else {
-      if (obj.parts[type] !== false) return;
-      obj.parts[type] = true;
-      if (obj.kind === "boat" && type === "prop") obj.mesh.userData.prop.visible = true;
-      sayAll(`${a.name}が${obj.name}に${ITEMS[type].name}をつけた`, "good");
-      if (ready2(obj)) {
-        sayAll(`${obj.name}が動かせる！ 乗りこんで逃げろ！`, "good");
-        sfx("ok");
-      }
-    }
-    a.inv.part = null;
-    a.score += 3;
-    a.stat.parts++;
-    speak(a, "part", { p: 0.6 });
-    sfxAt("install", a.x, a.z, 20);
-    emitNoise(a.x, a.z, 10, "install", a);
-  } });
-  return true;
-}
-function board(a, v) {
-  if (!ready2(v) || v.state === "gone" || a.state !== "ok") return false;
-  if (v.kind === "boat" && Math.hypot(a.x - W.dockEnd.x, a.z - W.dockEnd.z) > 3) return false;
-  const seat = v.seats[0] ? v.seats.indexOf(null, 1) : 0;
-  if (seat < 0) return false;
-  cancelAct(a);
-  a.path = null;
-  a.state = "vehicle";
-  a.vehicle = v;
-  a.seat = seat;
-  v.seats[seat] = a;
-  a.mx = a.mz = 0;
-  a.sprint = false;
-  a.stance = false;
-  a.tp++;
-  sfxAt("doorClose", v.x, v.z, 20, 0.6);
-  if (seat === 0 && v.state === "parked") {
-    const base2 = v.kind === "boat" ? 2 * (1 + pm(a, "boatStart") / 100) : 1.6 * (1 + pm(a, "carStart") / 100);
-    v.state = "starting";
-    v.startT = Math.max(0.4, base2);
-    v.waitT = 0;
-    sfxAt("engine", v.x, v.z, 70);
-    emitNoise(v.x, v.z, 70, "engine", a);
-    if (v.light) {
-      v.light.intensity = 60;
-      v.mesh.userData.headMat.emissive.setHex(16774352);
-    }
-  }
-  tell(a, seat === 0 ? v.kind === "boat" ? "W/A/D で湖の東の赤いブイまで進め！" : "W でアクセル、A/D でハンドル、S でブレーキ。出口まで走れ！" : "乗った！ 運転はまかせよう(止まっている時は E で降りる)", "info");
-  if (seat !== 0 || a !== G.me) sayAll(`${a.name}が${v.name}に乗った`, "dim");
-  return true;
-}
-function leaveVehicle(a, force = false) {
-  const v = a.vehicle;
-  if (!v) return false;
-  if (!force && Math.abs(v.v) > 1.5) {
-    tell(a, "走っている間は降りられない", "dim");
-    return false;
-  }
-  if (!force && v.kind === "boat" && Math.hypot(v.x - W.dockEnd.x, v.z - W.dockEnd.z) > 4) {
-    tell(a, "桟橋のそばでしか降りられない", "dim");
-    return false;
-  }
-  v.seats[a.seat] = null;
-  a.vehicle = null;
-  a.seat = -1;
-  if (a.state === "vehicle") a.state = "ok";
-  const p = v.kind === "boat" ? snapFree(W.dockEnd.x, W.dockEnd.z, 0.3, 4) : carSpot(v, a);
-  place(a, p.x, p.z);
-  a.y = 0;
-  if (!v.seats[0] && (v.state === "running" || v.state === "starting")) {
-    v.state = "parked";
-    v.v = 0;
-    if (v.light) {
-      v.light.intensity = 0;
-      v.mesh.userData.headMat.emissive.setHex(0);
-    }
-  }
-  return true;
-}
-function callPolice(a) {
-  if (!G.phone.fuse || G.phone.called) return false;
-  speak(a, a.fear >= 60 ? "policeS" : "police", { force: true });
-  startAct(a, "phone", callTime(a.fear), { done: () => {
-    if (G.phone.called) return;
-    G.phone.called = true;
-    G.phone.eta = Math.max(60, POLICE_DELAY - pm(a, "police"));
-    sfxAt("phone", a.x, a.z, 20);
-    emitNoise(a.x, a.z, 22, "phone", a);
-    sayAll(`${a.name}が警察に電話した！ あと${mmss(G.phone.eta)}で着く`, "good");
-    a.score += 4;
-    a.stat.police++;
-  } });
-  sfxAt("phone", a.x, a.z, 20);
-  return true;
-}
-function useRadio(a) {
-  if (G.radio.used) return false;
-  speak(a, a.fear >= 60 ? "radioS" : "radio", { force: true });
-  startAct(a, "radio", callTime(a.fear), { done: () => {
-    if (G.radio.used) return;
-    G.radio.used = true;
-    G.radio.t = G.t;
-    sfxAt("radio", a.x, a.z, 20);
-    emitNoise(a.x, a.z, 20, "radio", a);
-    sayAll(`無線がつながった。「猟師のゲンだ。${HERO_NEED}人がやられたら、すぐに行く」`, "info");
-    a.score += 2;
-    a.stat.radio++;
-  } });
-  sfxAt("radio", a.x, a.z, 20);
-  return true;
-}
-function canSeal(a) {
-  const k = G.killer;
-  return !!(a.inv && a.inv.part === "charm" && k && k.state === "ok" && k.maskOff && k.stun && k.stun.down && dist(a, k) < 2.7);
-}
-function sealKiller(a) {
-  const k = G.killer;
-  if (!canSeal(a)) return false;
-  k.stun.sealing = true;
-  a.rot = Math.atan2(k.x - a.x, k.z - a.z);
-  startAct(a, "seal", 1, { done: () => {
-    if (k.state !== "ok") return;
-    G.sealed = true;
-    k.state = "sealed";
-    k.grab = null;
-    a.inv.part = null;
-    a.score += 20;
-    a.stat.seal++;
-    sfx("seal");
-    sayAll(`${a.name}がお札を貼った！ カカシ男がくずれていく…`, "good");
-  }, cancel: () => {
-    if (k.stun) k.stun.sealing = false;
-  } });
-  return true;
-}
-function objectiveCands(a, add) {
-  for (const v of G.vehicles) {
-    if (v.state === "gone") continue;
-    let px, pz, r;
-    if (v.kind !== "boat") {
-      const fx2 = Math.sin(v.rot), fz = Math.cos(v.rot), t = clamp((a.x - v.x) * fx2 + (a.z - v.z) * fz, -2, 2);
-      px = v.x + fx2 * t;
-      pz = v.z + fz * t;
-      r = 2.2;
-    } else {
-      px = W.dockEnd.x;
-      pz = W.dockEnd.z;
-      r = 2.4;
-    }
-    const need = Object.keys(v.parts).filter((k2) => !v.parts[k2]);
-    let E;
-    if (a.inv.part && v.parts[a.inv.part] === false) E = { label: `${v.name}に${ITEMS[a.inv.part].name}をつける`, fn: () => installPart(a, v) };
-    else if (!need.length) E = v.seats.includes(null) ? { label: v.seats[0] ? `${v.name}に乗る` : `${v.name}を運転する`, fn: () => board(a, v) } : { label: "満員", fn: null };
-    else E = { label: `${v.name}: ${need.map((k2) => ITEMS[k2].short).join("・")}が必要`, fn: null };
-    add(px, pz, r, E, null, 0.2);
-  }
-  const sp = W.sp;
-  if (sp.fusebox && !G.phone.fuse) add(sp.fusebox.fx, sp.fusebox.fz, 1.4, a.inv.part === "fuse" ? { label: "配電盤にヒューズをつける", fn: () => installPart(a, "fusebox") } : { label: "配電盤: ヒューズが必要", fn: null });
-  if (sp.phone && !G.phone.called) add(sp.phone.fx, sp.phone.fz, 1.4, G.phone.fuse ? { label: "警察に電話する", fn: () => callPolice(a) } : { label: "電話: 電気が来ていない(配電盤にヒューズ)", fn: null });
-  if (sp.radio && !G.radio.used) add(sp.radio.fx, sp.radio.fz, 1.5, { label: "無線で助けを呼ぶ", fn: () => useRadio(a) });
-  const k = G.killer;
-  if (k && canSeal(a)) add(k.x, k.z, 2.7, { label: "お札を貼る！", fn: () => sealKiller(a) }, null, 3);
-}
-function escape(a, how) {
-  if (!alive(a)) return;
-  a.state = "escaped";
-  a.how = how;
-  a.vehicle = null;
-  a.seat = -1;
-  a.path = null;
-  a.act = null;
-  a.score += 10;
-  sayAll(`${a.name}が${HOW[how] || "車"}で逃げきった！`, "good");
-  tellSfx(a, "win");
-  bus.emit("escaped", a);
-}
-function vehicleBlocked(v, x, z, rot) {
-  const fx2 = Math.sin(rot), fz = Math.cos(rot);
-  if (v.kind !== "boat") {
-    for (const o of [-1.4, 0, 1.4]) {
-      const px = x + fx2 * o, pz = z + fz * o;
-      for (const [dx, dz] of [[0, 0], [0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]]) {
-        const c = cellAt(px + dx, pz + dz);
-        if (c < 0 || blocksCar(c)) return true;
-      }
-    }
-    return false;
-  }
-  for (const o of [-1, 0, 1.1]) {
-    const px = x + fx2 * o, pz = z + fz * o;
-    for (const [dx, dz] of [[0, 0], [0.7, 0], [-0.7, 0], [0, 0.7], [0, -0.7]]) {
-      const c = cellAt(px + dx, pz + dz);
-      if (c < 0 || T[c] !== 3) return true;
-    }
-  }
-  return false;
-}
-function aiDrive(v, dt) {
-  if (v.kind === "boat") {
-    const t = W.boatExit, want2 = Math.atan2(t.x - v.x, t.z - v.z), df2 = angDiff(v.rot, want2);
-    return [Math.abs(df2) > 1.2 ? 0.4 : 1, clamp(-df2 * 1.8, -1, 1)];
-  }
-  if (!v.route) {
-    const k = G.killer;
-    const [a, b] = v.routes.map((r) => W.routes[r]);
-    let best = Math.random() < 0.5 ? a : b;
-    if (k && alive(k)) {
-      const da = Math.hypot(k.x - a[1][0], k.z - a[1][1]), db = Math.hypot(k.x - b[1][0], k.z - b[1][1]);
-      best = da < db ? b : a;
-    }
-    v.route = best;
-    v.ri = 0;
-  }
-  const R = v.route;
-  while (v.ri < R.length - 1 && Math.hypot(R[v.ri][0] - v.x, R[v.ri][1] - v.z) < 7) v.ri++;
-  const [tx, tz] = R[v.ri];
-  const want = Math.atan2(tx - v.x, tz - v.z), df = angDiff(v.rot, want);
-  if (v.revT > 0) {
-    v.revT -= dt;
-    return [-1, clamp(df * 1.5, -1, 1)];
-  }
-  if (Math.abs(v.v) < 0.6) {
-    v.stuckT += dt;
-    if (v.stuckT > 1.8) {
-      v.stuckT = 0;
-      v.revT = 1.1;
-    }
-  } else v.stuckT = 0;
-  return [Math.abs(df) > 1.4 ? 0.5 : 1, clamp(-df * 1.8, -1, 1)];
-}
-function updateVehicle(v, dt) {
-  if (v.state === "gone") {
-    if (v.goneT > 0) {
-      v.goneT -= dt;
-      v.x += Math.sin(v.rot) * 14 * dt;
-      v.z += Math.cos(v.rot) * 14 * dt;
-      if (v.goneT <= 0) v.mesh.visible = false;
-    }
-    return;
-  }
-  if (v.state === "starting") {
-    v.startT -= dt;
-    if (v.startT <= 0) {
-      v.state = "running";
-      v.waitT = 0;
-    }
-  }
-  const drv = v.seats[0];
-  let thr = 0, st = 0;
-  if (v.state === "running" && drv) {
-    if (drv.ctrl === "player") {
-      const m = moveAxes();
-      thr = m.f;
-      st = m.r;
-    } else if (drv.ctrl === "remote") {
-      thr = drv.netDrive ? drv.netDrive[0] : 0;
-      st = drv.netDrive ? drv.netDrive[1] : 0;
-    } else {
-      v.waitT += dt;
-      const k2 = G.killer, kd = k2 && alive(k2) ? dist(v, k2) : 99;
-      const full = !v.seats.includes(null);
-      const coming = G.students.some((s) => s.state === "ok" && s.ai && s.ai.task && s.ai.task.type === "board" && s.ai.task.obj === v && dist(s, v) < 30);
-      const humanNear = G.students.some((s) => (s.ctrl === "player" || s.ctrl === "remote") && s.state === "ok" && dist(s, v) < 22);
-      if (full || kd < 13 || v.waitT > 9 || !coming && !humanNear && v.waitT > 2.5) [thr, st] = aiDrive(v, dt);
-    }
-  }
-  if (v.stall > 0) {
-    v.stall -= dt;
-    thr = Math.min(thr, 0);
-  }
-  const isCar = v.kind !== "boat";
-  const c = cellAt(v.x, v.z);
-  const solo = v.seats.filter(Boolean).length === 1;
-  const perk = drv ? 1 + (pm(drv, isCar ? "carSpd" : "boatSpd") + (solo ? pm(drv, "soloSpd") : 0)) / 100 : 1;
-  const maxF = (isCar ? c >= 0 && ROAD[c] ? 15 : 10 : 8) * perk, maxR = isCar ? 5 : 2.5;
-  if (thr > 0) v.v += thr * (isCar ? 7 : 4) * dt;
-  else if (thr < 0) v.v += thr * (v.v > 0 ? 12 : 5) * dt;
-  else v.v -= Math.sign(v.v) * Math.min(Math.abs(v.v), (isCar ? 3 : 1.5) * dt);
-  v.v = clamp(v.v, -maxR, maxF);
-  v.steer += (st * (isCar ? 0.55 : 0.8) - v.steer) * Math.min(1, dt * 6);
-  const turn = isCar ? v.v / 2.6 * Math.tan(v.steer) : v.steer * 1 * Math.min(1, Math.abs(v.v) / 2.5) * Math.sign(v.v || 1);
-  const nrot = v.rot - turn * dt;
-  const nx = v.x + Math.sin(nrot) * v.v * dt, nz = v.z + Math.cos(nrot) * v.v * dt;
-  if (Math.abs(v.v) > 0.01) {
-    if (vehicleBlocked(v, nx, nz, nrot)) {
-      if (Math.abs(v.v) > 4) sfxAt("doorHit", v.x, v.z, 30, 0.5);
-      v.v *= -0.25;
-    } else {
-      v.x = nx;
-      v.z = nz;
-      v.rot = nrot;
-    }
-  }
-  const k = G.killer;
-  if (isCar && k && k.state === "ok" && Math.abs(v.v) > 2) {
-    const sgn = v.v > 0 ? 1 : -1, fx2 = v.x + Math.sin(v.rot) * 1.9 * sgn, fz = v.z + Math.cos(v.rot) * 1.9 * sgn;
-    if (Math.hypot(k.x - fx2, k.z - fz) < 1.4) {
-      if (Math.abs(v.v) > 5) {
-        hurtKiller(k, 20, drv);
-        if (stunKiller(k, 16, drv, { big: true, force: true })) sayAll(`${v.name}でカカシ男をはねた！`, "good");
-      }
-      sfxAt("hit", k.x, k.z, 40);
-      v.v = 0;
-      v.stall = 1.6;
-    }
-  }
-  if (v.state === "running") {
-    let out = false;
-    if (isCar) {
-      for (const e2 of W.exits) if (Math.hypot(v.x - e2.x, v.z - e2.z) < 8) out = true;
-    } else if (Math.hypot(v.x - W.boatExit.x, v.z - W.boatExit.z) < 6) out = true;
-    if (out) {
-      for (const s of v.seats) if (s) escape(s, v.model);
-      v.seats.fill(null);
-      v.state = "gone";
-      v.goneT = 2.5;
-      if (v.light) v.light.intensity = 0;
-    }
-  }
-  if (v.state === "running" && Math.abs(v.v) > 1 && Math.random() < dt * 2) emitNoise(v.x, v.z, isCar ? 45 : 35, "engine", drv);
-}
-function updatePolice(dt) {
-  const P4 = G.phone;
-  if (P4.called && !P4.arrived) {
-    P4.eta -= dt;
-    if (P4.eta <= 0) {
-      const k = G.killer;
-      let e2 = pick(W.exits);
-      if (k && alive(k) && Math.random() < 0.7) e2 = W.exits.slice().sort((a, b) => Math.hypot(b.x - k.x, b.z - k.z) - Math.hypot(a.x - k.x, a.z - k.z))[0];
-      P4.arrived = true;
-      P4.exit = e2;
-      P4.zone = { x: e2.x, z: e2.z, r: 8 };
-      P4.mesh.visible = true;
-      P4.mesh.position.set(e2.x, 0, e2.z);
-      P4.mesh.rotation.y = e2.id === "n" ? 0 : Math.PI / 2;
-      P4.light.position.set(e2.x, 2.5, e2.z);
-      P4.light.intensity = 40;
-      sfx("siren");
-      sayAll(`警察が${e2.name}に着いた！ 走りこめ！`, "good");
-    }
-  }
-  if (P4.arrived) {
-    const on = Math.floor(G.t * 5) % 2 === 0;
-    P4.light.color.setHex(on ? 16719904 : 2117887);
-    P4.mesh.userData.red.emissive.setHex(on ? 16719904 : 2228224);
-    P4.mesh.userData.blue.emissive.setHex(on ? 2082 : 2117887);
-    for (const s of G.students) if (s.state === "ok" && Math.hypot(s.x - P4.zone.x, s.z - P4.zone.z) < P4.zone.r) escape(s, "police");
-  }
-}
-function updateHero() {
-  const R = G.radio;
-  if (!R.used || G.hero || G.left < 60) return;
-  const out = G.students.filter((s) => s.state === "dead" || s.state === "escaped").length;
-  if (out < HERO_NEED) return;
-  if (R.readyT < 0) {
-    R.readyT = G.t;
-    sayAll("どこかで車のエンジン音がする… ゲンが向かっている", "info");
-  }
-  if (G.t - R.readyT < HERO_DELAY) return;
-  const k = G.killer;
-  let e2 = W.exits[1];
-  if (k && alive(k)) e2 = W.exits.slice().sort((a, b) => Math.hypot(b.x - k.x, b.z - k.z) - Math.hypot(a.x - k.x, a.z - k.z))[0];
-  const p = snapFree(e2.x * 0.9, e2.z * 0.9, 0.35, 8);
-  const humans = G.students.filter((s) => !s.hero && (s.ctrl === "player" || s.ctrl === "remote") && (s.state === "dead" || s.state === "escaped"));
-  const who = humans.length ? pick(humans) : null;
-  const h = makeHero(HERO, p.x, p.z, who ? who.ctrl : "ai");
-  h.peer = who ? who.peer : null;
-  rememberMaterials(h.rig);
-  G.scene.add(h.rig.root);
-  h.ai = { skill: 1.3, think: 0, kt: -99, kseen: -99, mem: {} };
-  G.actors.push(h);
-  G.students.push(h);
-  G.hero = h;
-  speak(h, "arrive", { force: true, delay: 0.8 });
-  sayAll("猟師のゲンが来た！ 猟銃を持っている", "good");
-  if (who && who.ctrl === "player") {
-    G.me = h;
-    G.view = h;
-    bus.emit("heroControl", h);
-    tell(h, "ゲンとして戦え！ 猟銃(左クリック)はカカシ男を大きくひるませる(1発)", "good");
-  } else if (who && who.peer && NETH.toPeer) NETH.toPeer(who.peer, { e: "you", id: h.id });
-}
-function updateObjectives(dt) {
-  for (const v of G.vehicles) updateVehicle(v, dt);
-  updatePolice(dt);
-  updateHero();
-}
-function syncVehicles() {
-  for (const v of G.vehicles) {
-    if (!v.mesh.visible) continue;
-    v.mesh.position.set(v.x, v.kind === "boat" ? Math.sin(G.t * 1.7) * 0.04 : 0, v.z);
-    v.mesh.rotation.y = v.rot;
-    if (v.kind === "boat") v.mesh.rotation.z = Math.sin(G.t * 1.3) * 0.03;
-    const S2 = SEATS[v.model], fx2 = Math.sin(v.rot), fz = Math.cos(v.rot), rx = -fz, rz = fx2;
-    v.seats.forEach((s, i) => {
-      if (!s) return;
-      const [ox, oz] = S2[i];
-      s.x = v.x - rx * ox + fx2 * oz;
-      s.z = v.z - rz * ox + fz * oz;
-      s.rot = v.rot;
-      s.y = v.kind === "boat" ? 0.05 : 0.12;
-    });
-  }
-}
-var vehicleLabel = (v) => v.state === "gone" ? "脱出ずみ" : ready2(v) ? "動かせる！" : Object.keys(v.parts).filter((k) => !v.parts[k]).map((k) => ITEMS[k].short).join("・") + "が必要";
-
 // src/interact.js
 function spawnItem(type, x, z, extra = {}, id) {
   const def = ITEMS[type];
@@ -11938,9 +11447,9 @@ function spawnItem(type, x, z, extra = {}, id) {
     mesh.rotation.y = Math.random() * 3;
     mesh.position.y = mesh.userData.flatY || 0.05;
   }
-  const glow = glowSprite(new THREE10.Color(def.color).getHex(), def.kind === "weapon" ? 0.9 : 0.75, 0.5);
+  const glow = glowSprite(new THREE9.Color(def.color).getHex(), def.kind === "weapon" ? 0.9 : 0.75, 0.5);
   glow.position.y = 0.22;
-  const g = new THREE10.Group();
+  const g = new THREE9.Group();
   g.add(mesh, glow);
   g.position.set(x, 0.03, z);
   G.scene.add(g);
@@ -12133,11 +11642,12 @@ function vault(a, w, onDone, dive = null) {
       emitNoise(w.x, w.z, 18, "vault", a);
     }
     const dmg = was === "open" ? VAULT.glass / VAULT.openDiv : VAULT.glass;
-    a.vault = { t: 0, dur: VAULT.dive / spd, x0: a.x, z0: a.z, x1, z1, rot: Math.atan2(x1 - a.x, z1 - a.z), dive: true, done: () => {
+    a.vault = { t: 0, dur: VAULT.dive / spd, x0: a.x, z0: a.z, x1, z1, rot: Math.atan2(x1 - a.x, z1 - a.z), dive: true, win: w, done: () => {
       damage(a, dmg, "glass");
       if (alive(a)) {
         const scared = fearLevel(a.fear) >= 2, glass = was !== "open";
-        a.down = { t: 0, dur: VAULT.getUp + (scared ? VAULT.diveStagger : 0), kind: "dive", glass, scared };
+        const k = G.killer, safe = was === "open" && !(k && k.state === "ok" && Math.hypot(k.x - a.x, k.z - a.z) < VAULT.fastR);
+        a.down = { t: 0, dur: VAULT.getUp / (safe ? VAULT.fastDiv : 1) + (scared ? VAULT.diveStagger : 0), kind: "dive", glass, scared };
         tell(a, glass ? "窓をやぶって飛びこんだ！ ガラスをはらって起き上がるまで動けない" : "窓に飛びこんだ！ 起き上がるまで動けない", "warn");
         if (glass) speak(a, "dive", { p: 0.7, delay: 1.2 });
       }
@@ -12152,7 +11662,7 @@ function vault(a, w, onDone, dive = null) {
     }
     sfxAt("vault", w.x, w.z, 14);
     emitNoise(w.x, w.z, 8, "vault", a);
-    a.vault = { t: 0, dur: (VAULT.climb + extra) / spd, pre: extra / spd, x0: a.x, z0: a.z, x1, z1, rot: Math.atan2(x1 - a.x, z1 - a.z), done: () => {
+    a.vault = { t: 0, dur: (VAULT.climb + extra) / spd, pre: extra / spd, x0: a.x, z0: a.z, x1, z1, rot: Math.atan2(x1 - a.x, z1 - a.z), win: w, done: () => {
       if (alive(a) && a.state === "ok" && fearLevel(a.fear) >= 2) {
         a.down = { t: 0, dur: VAULT.stagger, kind: "stagger" };
         tell(a, "こわくて足がもつれた… よろけている", "warn");
@@ -12286,7 +11796,7 @@ function pickKSickle(k, ks) {
     if (ks.taken) return;
     ks.taken = true;
     ks.mesh.visible = false;
-    k.sickles = Math.min(km(k, "sickleMax", KILLER.sickleMax), k.sickles + (ks.n || 1));
+    k.sickles = Math.min(km(k, "sickleMax", KILLER.sickleMax), k.sickles + KILLER.sicklePick);
     tell(k, `投げ鎌を拾った(${k.sickles}本)`, "info");
     sfxAt("pickup", k.x, k.z, 8);
   };
@@ -12336,8 +11846,8 @@ function studentChoices(a, look) {
   for (const h of W.hides) if (!h.occ) add(h.fx, h.fz, 1.25, { label: `かくれる: ${h.label}`, fn: () => enterHide(a, h) });
   for (const d of doors) {
     if (d.broken) continue;
-    const E = d.barr ? { label: "バリケードを外す", fn: () => openDoor(a, d) } : d.open ? { label: "ドアを閉める", fn: () => closeDoor(a, d) } : { label: "ドアを開ける", fn: () => openDoor(a, d) };
-    const R = !d.open && !d.barr ? { label: "バリケードをする", fn: () => barricade(a, d) } : null;
+    const E = d.barr ? { label: "バリケードを外す", fn: () => openDoor(a, d) } : d.open ? { label: "ドアを閉める", fn: () => closeDoor(a, d) } : { label: "ドアを開ける(長押し: バリケード)", fn: () => openDoor(a, d) };
+    const R = !d.open && !d.barr ? { label: "バリケードをする", fn: () => barricade(a, d), hold: true } : null;
     add(d.x, d.z, 1.7, E, R);
   }
   for (const w of windows) {
@@ -12370,8 +11880,18 @@ function killerChoices(k, look) {
   for (const s of G.students) if (s.state === "ok" && !s.vault && !s.dodge && meleeClear(k.x, k.z, s.x, s.z)) add(s.x, s.z, 1.9, { label: `つかむ: ${s.name}`, fn: () => {
     startGrab(k, s);
   } }, 1);
+  const grabE = { label: "つかむ(前へ手をのばす)", fn: () => {
+    startGrab(k);
+  } };
   for (const h of W.hides) add(h.fx, h.fz, 1.6, { label: `しらべる: ${h.label}`, fn: () => killerSearchHide(k, h) });
-  for (const v of G.vehicles) if (v.state !== "gone" && v.seats.some(Boolean) && Math.abs(v.v) < 2.5) add(v.x, v.z, v.kind === "boat" ? 3 : 3.3, { label: `${v.name}から引きずり出す`, fn: () => pullDriver(k, v) }, 0.5);
+  for (const v of G.vehicles) if (v.state !== "gone" && v.seats.some(Boolean) && (v.kind === "boat" || Math.abs(v.v) < 2.5)) add(
+    v.x,
+    v.z,
+    v.kind === "boat" ? 3 : 3.3,
+    // ボートは動いていても引きずり出せる
+    { label: `${v.name}から引きずり出す`, fn: () => pullDriver(k, v) },
+    0.5
+  );
   for (const d2 of doors) if (!d2.open && !d2.broken) add(d2.x, d2.z, 1.6, d2.barr ? { label: "バリケード(クリックでこわす)", fn: null } : { label: "ドアを開ける", fn: () => killerOpenDoor(k, d2) });
   for (const ks of G.ksickles) if (!ks.taken) add(ks.x, ks.z, 1.6, k.sickles >= km(k, "sickleMax", KILLER.sickleMax) ? { label: "投げ鎌はいっぱい", fn: null } : { label: "投げ鎌を拾う", fn: () => pickKSickle(k, ks) }, 0.3);
   const best = pickBest(C, k, look);
@@ -12380,9 +11900,10 @@ function killerChoices(k, look) {
   if (d && d.barr) hint = `クリック: バリケードをこわす(${Math.max(1, (G.rage ? 1 : km(k, "doorHits", KILLER.doorHits)) - d.dmg)} 回)`;
   else {
     const w = windowInFront(k, 1.8);
-    if (w && w.state !== "broken") hint = "クリック: 窓をわる(カカシ男は窓を通れない)";
+    if (w && w.state !== "broken") hint = "クリック: 窓をわる(近くの学生にガラスが刺さる)";
+    else if (carInFront(k)) hint = `クリック: 車をこわす(${KILLER.carHits} 回)`;
   }
-  return { E: best ? best.E : null, hint };
+  return { E: best ? best.E : grabE, hint };
 }
 
 // src/commands.js
@@ -13104,6 +12625,13 @@ function thinkKiller(k) {
     } else moveTo(k, h.fx, h.fz);
     return;
   }
+  const boat = G.vehicles.find((v) => v.kind === "boat" && v.state !== "gone" && v.seats.some(Boolean));
+  if (boat && dist(k, boat) < 70) {
+    if (dist(k, boat) < 2.8) pullDriver(k, boat);
+    else moveTo(k, boat.x, boat.z, true);
+    ai.lastInfo = G.t;
+    return;
+  }
   const car = G.vehicles.find((v) => v.kind === "car" && (v.state === "running" || v.state === "starting") && v.seats[0]);
   if (car) {
     interceptCar(k, car);
@@ -13204,7 +12732,7 @@ function chase(k, s) {
     return;
   }
   const clear = d < 22 && walkClear(k.x, k.z, s.x, s.z, 0.35);
-  if (d > 2.3 && d < 4.8 && !k.swim && walkClear(k.x, k.z, s.x, s.z, 0.4) && Math.random() < D2.lunge) {
+  if (d > 2.3 && d < 5.8 && !k.swim && walkClear(k.x, k.z, s.x, s.z, 0.4) && Math.random() < D2.lunge) {
     const lx = s.x + (s.vx || 0) * 0.25, lz = s.z + (s.vz || 0) * 0.25;
     k.rot = Math.atan2(lx - k.x, lz - k.z);
     k.mx = k.mz = 0;
@@ -13233,6 +12761,14 @@ function interceptCar(k, car) {
   const d = dist(k, car);
   if (Math.abs(car.v) < 1.2 && d < 3.2) {
     pullDriver(k, car);
+    return;
+  }
+  if (d < 8 && Math.abs(car.v) > 2 && Math.abs(angDiff(car.rot + (car.v < 0 ? Math.PI : 0), Math.atan2(k.x - car.x, k.z - car.z))) < 0.5) {
+    k.rot = angTo(k, car);
+    k.mx = k.mz = 0;
+    k.path = null;
+    k.stance = true;
+    k.stanceT = 1.2;
     return;
   }
   if (d > 26 && k.cd.morph <= 0 && car.route) {
@@ -13754,6 +13290,7 @@ function flagsOf(a) {
   if (a.kind !== "killer") {
     if (a.shine) f |= 16384;
     if (a.flMode) f |= 32768;
+    if (G.t < (a.sickleSlowUntil || 0)) f |= 65536;
   }
   if (a.kind === "killer") {
     if (a.grab) f |= 16384;
@@ -13886,6 +13423,7 @@ function applySnap(s) {
       a.flMode = !!(fl & 32768);
       a.cells = cells || 0;
       a.cell = cell || 0;
+      a.sickleNet = !!(fl & 65536);
     }
     if (!isMe) {
       a.sprinting = !!(fl & 2);
@@ -13907,6 +13445,7 @@ function applySnap(s) {
       if (!a.atk) {
         const hv = !!(fl & 4096), kk = a.kind === "killer";
         a.atk = { t: 0, dur: kk ? hv ? 0.95 : 0.62 : hv ? 0.9 : 0.55, heavy: hv, hit: kk ? hv ? 0.5 : 0.27 : hv ? 0.55 : 0.24, done: true };
+        if (kk) a.atkSlowUntil = G.t + KILLER.atkSlow;
       }
     } else a.atk = null;
     if (a.kind === "killer") {
@@ -13949,7 +13488,7 @@ function applySnap(s) {
     a.vehicle = veh >= 0 ? G.vehicles[veh] : null;
     a.seat = seat;
     if (a.vehicle) a.vehicle.seats[seat] = a;
-    const locked = a.state !== "ok" || a.vault || a.down || a.trapped || a.trip || a.dodge || a.act && !a.act.move || a.kind === "killer" && (a.stun || a.getUp > 0 || a.searchT > 0 || a.morphT > 0 || a.grab || a.grabTry || a.grabMissT > 0 || a.throwT > 0 || a.lunge || a.missT > 0 || a.atk && a.kind === "killer");
+    const locked = a.state !== "ok" || a.vault || a.down || a.trapped || a.trip || a.dodge || a.act && !a.act.move || a.kind === "killer" && (a.stun || a.getUp > 0 || a.searchT > 0 || a.morphT > 0 || a.grab || a.grabTry || a.grabMissT > 0 || a.throwT > 0 || a.lunge || a.missT > 0);
     if (isMe && a.kind === "killer" && (a.lunge || a.missT > 0 || G.intro)) {
       a.tx = x;
       a.tz = z;
@@ -14036,7 +13575,7 @@ function applySnap(s) {
   if (s.P[0] && !P4.fuse && W.sp.fusebox) {
     const lamp = W.sp.fusebox.mesh.userData.lamp;
     W.sp.fusebox.mesh.userData.lampOff = lamp.material;
-    lamp.material = new THREE11.MeshLambertMaterial({ color: 4259680, emissive: 2146368 });
+    lamp.material = new THREE10.MeshLambertMaterial({ color: 4259680, emissive: 2146368 });
   }
   P4.fuse = !!s.P[0];
   P4.called = !!s.P[1];
@@ -14197,7 +13736,7 @@ function clientTick(dt) {
 }
 
 // src/admin.js
-import * as THREE12 from "three";
+import * as THREE11 from "three";
 var PASS = 1274659978;
 function fnv(str) {
   let h = 2166136261;
@@ -14420,7 +13959,7 @@ function giveStartItems(a) {
 var espBox = null;
 var espEls = [];
 var espSprites = [];
-var v3 = new THREE12.Vector3();
+var v3 = new THREE11.Vector3();
 function updateESP(camera4, scene2) {
   const on = cheatsAllowed() && G.mode === "play" && (ADM.esp || ADM.espItems);
   if (!espBox) {
@@ -14939,8 +14478,8 @@ function quickUI(force = false) {
 function equippedFor(charId) {
   return (PROF.eq[charId] || []).map((u) => PROF.owned.find((o) => o.u === u)).filter(Boolean).map((o) => ({ id: o.id, r: o.r }));
 }
-var KEYS_S = [["WASD", "歩く"], ["Shift", "走る(スタミナを使う)"], ["C", "しゃがむ(足音が出ない)"], ["E", `調べる・拾う・ドア・かくれる・乗る・窓(ふつうに乗りこえると約 ${VAULT.climb.toFixed(1)} 秒)`], ["走りながら E", `窓に飛びこむ(速いが、たおれて ${VAULT.getUp} 秒動けない。閉まった窓はケガ ${VAULT.glass})`], ["R", "バリケード・窓をそっと開ける"], ["左クリック", "武器でなぐる"], ["右クリック(長押し)", "構え: こうげきが 1.75 倍、スペースで回避"], ["1 2 3", "ポケットの道具を使う(長押しで落とす)"], ["I", "攻撃のとどく範囲(パーク「すばやさこそ正義」)"], ["F", "懐中電灯"], ["Z", "フラッシュライト(右クリック長押しで照らす。カカシ男の目に 0.5 秒で目くらまし。電池 1 本で 4 秒)"], ["G", "部品を置く"], ["スペース", "修理のタイミング"], ["E か Q(連打)", "つかまれた・トラバサミ(つかまれて 0.5 秒たってから。とどめの間も半分きく)"], ["Tab", "地図(地図を持っている時)"], ["Esc", "メニュー"]];
-var KEYS_K = [["WASD", "歩く"], ["左クリック", "鎌でこうげき(ドアや窓もこわす)"], ["左クリック長押し", `前に ${LUNGE.dist}m 飛びかかってこうげき(外すと ${LUNGE.miss} 秒たおれる)`], ["右クリック(長押し)", "構え: ガード。構えたままのこうげきは 1.75 倍"], ["E", "つかむ(手をのばして 0.42 秒たってからつかまえる。はなれる・回避で空ぶり)・ドアを開ける・かくれ場所を調べる・投げ鎌を拾う"], ["スペース", "とどめ / ひるんだら連打で起きる"], ["つかんだ後 1 2 3 4", `とどめを選ぶ(${KILLS.map((o) => o.name).join("・")})。クリック・スペースは 1。つかんで 0.5 秒たってから`], ["Shift / 2", "影走り"], ["Q / 3", "気配"], ["X / 4", "忍び足"], ["1", "霧渡り(地図で場所を選ぶ)"], ["F", "投げ鎌"], ["R", "トラバサミを置く(外だけ)"], ["Tab", "地図"], ["F1", "管理者メニュー(管理者モードの時)"]];
+var KEYS_S = [["WASD", "歩く"], ["Shift", "走る(スタミナを使う)"], ["C", "しゃがむ(足音が出ない)"], ["E", `調べる・拾う・ドア・かくれる・乗る・窓(ふつうに乗りこえると約 ${VAULT.climb.toFixed(1)} 秒)`], ["走りながら E", `窓に飛びこむ(速いが、たおれて ${VAULT.getUp} 秒動けない。カカシ男が近くにいなくて開いた窓なら ${(VAULT.getUp / VAULT.fastDiv).toFixed(1)} 秒。閉まった窓はケガ ${VAULT.glass})`], ["R / ドアの前で E 長押し", "バリケード"], ["R", "窓をそっと開ける"], ["左クリック", "武器でなぐる"], ["右クリック(長押し)", "構え: こうげきが 1.75 倍、スペースで回避"], ["1 2 3", "ポケットの道具を使う(長押しで落とす)"], ["I", "攻撃のとどく範囲(パーク「すばやさこそ正義」)"], ["F", "懐中電灯"], ["Z", "フラッシュライト(右クリック長押しで照らす。カカシ男の目に 0.5 秒で目くらまし。電池 1 本で 4 秒)"], ["G", "部品を置く"], ["スペース", "修理のタイミング"], ["E か Q(連打)", "つかまれた・トラバサミ(つかまれて 0.5 秒たってから。とどめの間も半分きく)"], ["Tab", "地図(地図を持っている時)"], ["Esc", "メニュー"]];
+var KEYS_K = [["WASD", "歩く"], ["左クリック", "鎌でこうげき(歩きながらできる。押して 0.5 秒は足が 45% おそい)。ドア・窓・車もこわす(窓をわると近くの学生にガラスが刺さる)"], ["構えて車の前に立つ", "車を止める(車は 3 回こうげきでこわれる)"], ["水の中", "泳ぐのがとても速い(700%)。霧渡りで水の中にも行ける"], ["左クリック長押し", `前に ${LUNGE.dist}m 飛びかかってこうげき(ダメージは ふつうの 55%。外すと ${LUNGE.miss} 秒たおれる)`], ["右クリック(長押し)", "構え: ガード。構えたままのこうげきは 1.75 倍"], ["E", "つかむ(0.5 秒のあいだ、前 1m の所・半径 60cm に入った人をつかまえる。回避でよけられる)・ドアを開ける・かくれ場所を調べる・投げ鎌を拾う(1 回で 2 本)・ボートから引きずり出す"], ["スペース", "とどめ / ひるんだら連打で起きる"], ["つかんだ後 1 2 3 4", `とどめを選ぶ(${KILLS.map((o) => o.name).join("・")})。クリック・スペースは 1。つかんで 0.5 秒たってから`], ["Shift / 2", "影走り"], ["Q / 3", "気配"], ["X / 4", "忍び足"], ["1", "霧渡り(地図で場所を選ぶ)"], ["F", "投げ鎌"], ["R", "トラバサミを置く(外だけ)"], ["Tab", "地図"], ["F1", "管理者メニュー(管理者モードの時)"]];
 function showHelp(back) {
   modal(el(
     "div",
@@ -15240,7 +14779,7 @@ function buildTouch() {
   for (const [a, label, cls] of G.role === "killer" ? TB_K : TB_S) {
     const b = el("button", { class: "tb " + cls, "data-a": a }, el("span", null, label));
     const hold = a === "attack" && G.role === "killer";
-    const pk = G.role !== "killer" && /^s[123]$/.test(a);
+    const pk = G.role !== "killer" && (/^s[123]$/.test(a) || a === "use");
     b.addEventListener("pointerdown", (e2) => {
       e2.preventDefault();
       e2.stopPropagation();
@@ -15666,7 +15205,7 @@ function drawSkill(c) {
   g.fillText(G.touch ? "タップ!" : "スペース!", S2 / 2, S2 / 2 + 5);
 }
 var pingEls = [];
-var v32 = new THREE13.Vector3();
+var v32 = new THREE12.Vector3();
 function updatePings() {
   const k = G.killer;
   let n = 0;
@@ -15830,6 +15369,524 @@ function updateTalk(dt) {
   }
 }
 
+// src/objectives.js
+import * as THREE13 from "three";
+var HOW = { car: "車", truck: "トラック", boat: "ボート", police: "警察の車" };
+var SEATS = {
+  car: [[-0.42, 0.15], [0.42, 0.15], [-0.42, -1], [0.42, -1]],
+  truck: [[-0.42, 0.85], [0.42, 0.85]],
+  boat: [[0, -1.25], [0, 0.35]]
+};
+function newVehicle(o) {
+  return Object.assign({ v: 0, steer: 0, state: "parked", stall: 0, waitT: 0, route: null, ri: 0, startT: 0, stuckT: 0, revT: 0, goneT: 0 }, o);
+}
+function setupObjectives(scene2) {
+  const car = newVehicle({ id: 0, kind: "car", model: "car", name: "車", spot: W.carSpot, parts: { key: false, battery: false, gas: false }, seats: [null, null, null, null], mesh: makeCar(), routes: ["n", "w"] });
+  const truck = newVehicle({ id: 1, kind: "car", model: "truck", name: "トラック", spot: W.car2Spot, parts: { key: false, battery: false, gas: false }, seats: [null, null], mesh: makeTruck(), routes: ["n2", "w2"] });
+  const boat = newVehicle({ id: 2, kind: "boat", model: "boat", name: "ボート", spot: W.boatSpot, parts: { gas: false, prop: false }, seats: [null, null], mesh: makeBoat() });
+  for (const v of [car, truck, boat]) {
+    Object.assign(v, { x: v.spot.x, z: v.spot.z, rot: v.spot.rot });
+    v.mesh.position.set(v.x, 0, v.z);
+    v.mesh.rotation.y = v.rot;
+    scene2.add(v.mesh);
+  }
+  for (const v of [car, truck]) {
+    const hl = new THREE13.SpotLight(16773328, 0, 45, 0.5, 0.5, 1);
+    hl.position.set(0, 0.9, 2.2);
+    hl.target.position.set(0, 0, 14);
+    v.mesh.add(hl, hl.target);
+    v.light = hl;
+  }
+  G.vehicles = [car, truck, boat];
+  const pc = makePoliceCar();
+  pc.visible = false;
+  scene2.add(pc);
+  const pl = new THREE13.PointLight(16719904, 0, 30, 1);
+  pl.position.y = 2.5;
+  scene2.add(pl);
+  G.phone = { fuse: false, called: false, eta: 0, arrived: false, exit: null, zone: null, mesh: pc, light: pl };
+  G.radio = { used: false, t: 0, readyT: -1 };
+}
+function resetObjectives() {
+  for (const v of G.vehicles) {
+    Object.assign(v, { x: v.spot.x, z: v.spot.z, rot: v.spot.rot, v: 0, steer: 0, state: "parked", stall: 0, waitT: 0, route: null, ri: 0, startT: 0, stuckT: 0, revT: 0, goneT: 0 });
+    for (const k in v.parts) v.parts[k] = false;
+    v.seats.fill(null);
+    v.mesh.visible = true;
+    if (v.mesh.userData.prop) v.mesh.userData.prop.visible = false;
+    if (v.light) {
+      v.light.intensity = 0;
+      v.mesh.userData.headMat.emissive.setHex(0);
+    }
+  }
+  Object.assign(G.phone, { fuse: false, called: false, eta: 0, arrived: false, exit: null, zone: null });
+  G.phone.mesh.visible = false;
+  G.phone.light.intensity = 0;
+  Object.assign(G.radio, { used: false, t: 0, readyT: -1 });
+  if (W.sp.fusebox && W.sp.fusebox.mesh.userData.lampOff) W.sp.fusebox.mesh.userData.lamp.material = W.sp.fusebox.mesh.userData.lampOff;
+}
+var ready2 = (v) => Object.values(v.parts).every(Boolean);
+function partTargets(type, from) {
+  const L4 = [];
+  for (const v of G.vehicles) {
+    if (v.state === "gone" || v.parts[type] !== false) continue;
+    const p = v.kind === "boat" ? { x: W.dockEnd.x, z: W.dockEnd.z } : carSpot(v, from || v);
+    L4.push({ obj: v, x: p.x, z: p.z });
+  }
+  if (type === "fuse" && !G.phone.fuse && W.sp.fusebox) L4.push({ obj: "fusebox", x: W.sp.fusebox.fx, z: W.sp.fusebox.fz });
+  return L4;
+}
+function isNeeded(type) {
+  if (type === "charm") return !!G.killer && G.killer.state === "ok";
+  return partTargets(type).length > 0;
+}
+function carSpot(c, from) {
+  const fx2 = Math.sin(c.rot), fz = Math.cos(c.rot), rx = -fz, rz = fx2;
+  const cand = [[rx * 1.85, rz * 1.85], [-rx * 1.85, -rz * 1.85], [fx2 * 2.9, fz * 2.9], [-fx2 * 2.9, -fz * 2.9]];
+  let best = null, bd = 1e9;
+  for (const [ox, oz] of cand) {
+    const x = c.x + ox, z = c.z + oz;
+    if (!freeAt(x, z, 0.3, "dry")) continue;
+    const d = Math.hypot(x - from.x, z - from.z);
+    if (d < bd) {
+      bd = d;
+      best = { x, z };
+    }
+  }
+  return best || snapFree(c.x + rx * 2, c.z + rz * 2, 0.3, 6);
+}
+function boardSpot(v, from) {
+  return v.kind === "boat" ? { x: W.dockEnd.x, z: W.dockEnd.z } : carSpot(v, from);
+}
+function installPart(a, obj) {
+  const type = a.inv && a.inv.part;
+  if (!type) return false;
+  if (obj === "fusebox" ? type !== "fuse" || G.phone.fuse : obj.parts[type] !== false) return false;
+  const dur = (3.4 - (a.st.repair || 5) * 0.12) / Math.max(0.3, 1 + pm(a, "repair") / 100);
+  if (obj !== "fusebox") a.rot = Math.atan2(obj.x - a.x, obj.z - a.z);
+  startAct(a, "install", dur, { checks: repairChecks(a.st), done: () => {
+    if (a.inv.part !== type) return;
+    if (obj === "fusebox") {
+      if (G.phone.fuse) return;
+      G.phone.fuse = true;
+      const lamp = W.sp.fusebox.mesh.userData.lamp;
+      W.sp.fusebox.mesh.userData.lampOff = lamp.material;
+      lamp.material = new THREE13.MeshLambertMaterial({ color: 4259680, emissive: 2146368 });
+      sayAll(`${a.name}が配電盤にヒューズをつけた。管理棟の電話が使える！`, "good");
+    } else {
+      if (obj.parts[type] !== false) return;
+      obj.parts[type] = true;
+      if (obj.kind === "boat" && type === "prop") obj.mesh.userData.prop.visible = true;
+      sayAll(`${a.name}が${obj.name}に${ITEMS[type].name}をつけた`, "good");
+      if (ready2(obj)) {
+        sayAll(`${obj.name}が動かせる！ 乗りこんで逃げろ！`, "good");
+        sfx("ok");
+      }
+    }
+    a.inv.part = null;
+    a.score += 3;
+    a.stat.parts++;
+    speak(a, "part", { p: 0.6 });
+    sfxAt("install", a.x, a.z, 20);
+    emitNoise(a.x, a.z, 10, "install", a);
+  } });
+  return true;
+}
+function board(a, v) {
+  if (!ready2(v) || v.state === "gone" || a.state !== "ok") return false;
+  if (v.kind === "boat" && Math.hypot(a.x - W.dockEnd.x, a.z - W.dockEnd.z) > 3) return false;
+  const seat = v.seats[0] ? v.seats.indexOf(null, 1) : 0;
+  if (seat < 0) return false;
+  cancelAct(a);
+  a.path = null;
+  a.state = "vehicle";
+  a.vehicle = v;
+  a.seat = seat;
+  v.seats[seat] = a;
+  a.mx = a.mz = 0;
+  a.sprint = false;
+  a.stance = false;
+  a.tp++;
+  sfxAt("doorClose", v.x, v.z, 20, 0.6);
+  if (seat === 0 && v.state === "parked") {
+    const base2 = v.kind === "boat" ? 2 * (1 + pm(a, "boatStart") / 100) : 1.6 * (1 + pm(a, "carStart") / 100);
+    v.state = "starting";
+    v.startT = Math.max(0.4, base2);
+    v.waitT = 0;
+    sfxAt("engine", v.x, v.z, 70);
+    emitNoise(v.x, v.z, 70, "engine", a);
+    if (v.light) {
+      v.light.intensity = 60;
+      v.mesh.userData.headMat.emissive.setHex(16774352);
+    }
+  }
+  tell(a, seat === 0 ? v.kind === "boat" ? "W/A/D で湖の東の赤いブイまで進め！" : "W でアクセル、A/D でハンドル、S でブレーキ。出口まで走れ！" : "乗った！ 運転はまかせよう(止まっている時は E で降りる)", "info");
+  if (seat !== 0 || a !== G.me) sayAll(`${a.name}が${v.name}に乗った`, "dim");
+  return true;
+}
+function leaveVehicle(a, force = false) {
+  const v = a.vehicle;
+  if (!v) return false;
+  if (!force && Math.abs(v.v) > 1.5) {
+    tell(a, "走っている間は降りられない", "dim");
+    return false;
+  }
+  if (!force && v.kind === "boat" && Math.hypot(v.x - W.dockEnd.x, v.z - W.dockEnd.z) > 4) {
+    tell(a, "桟橋のそばでしか降りられない", "dim");
+    return false;
+  }
+  v.seats[a.seat] = null;
+  a.vehicle = null;
+  a.seat = -1;
+  if (a.state === "vehicle") a.state = "ok";
+  const p = v.kind === "boat" ? snapFree(W.dockEnd.x, W.dockEnd.z, 0.3, 4) : carSpot(v, a);
+  place(a, p.x, p.z);
+  a.y = 0;
+  if (!v.seats[0] && (v.state === "running" || v.state === "starting")) {
+    v.state = "parked";
+    v.v = 0;
+    if (v.light) {
+      v.light.intensity = 0;
+      v.mesh.userData.headMat.emissive.setHex(0);
+    }
+  }
+  return true;
+}
+function callPolice(a) {
+  if (!G.phone.fuse || G.phone.called) return false;
+  speak(a, a.fear >= 60 ? "policeS" : "police", { force: true });
+  startAct(a, "phone", callTime(a.fear), { done: () => {
+    if (G.phone.called) return;
+    G.phone.called = true;
+    G.phone.eta = Math.max(60, POLICE_DELAY - pm(a, "police"));
+    sfxAt("phone", a.x, a.z, 20);
+    emitNoise(a.x, a.z, 22, "phone", a);
+    sayAll(`${a.name}が警察に電話した！ あと${mmss(G.phone.eta)}で着く`, "good");
+    a.score += 4;
+    a.stat.police++;
+  } });
+  sfxAt("phone", a.x, a.z, 20);
+  return true;
+}
+function useRadio(a) {
+  if (G.radio.used) return false;
+  speak(a, a.fear >= 60 ? "radioS" : "radio", { force: true });
+  startAct(a, "radio", callTime(a.fear), { done: () => {
+    if (G.radio.used) return;
+    G.radio.used = true;
+    G.radio.t = G.t;
+    sfxAt("radio", a.x, a.z, 20);
+    emitNoise(a.x, a.z, 20, "radio", a);
+    sayAll(`無線がつながった。「猟師のゲンだ。${HERO_NEED}人がやられたら、すぐに行く」`, "info");
+    a.score += 2;
+    a.stat.radio++;
+  } });
+  sfxAt("radio", a.x, a.z, 20);
+  return true;
+}
+function canSeal(a) {
+  const k = G.killer;
+  return !!(a.inv && a.inv.part === "charm" && k && k.state === "ok" && k.maskOff && k.stun && k.stun.down && dist(a, k) < 2.7);
+}
+function sealKiller(a) {
+  const k = G.killer;
+  if (!canSeal(a)) return false;
+  k.stun.sealing = true;
+  a.rot = Math.atan2(k.x - a.x, k.z - a.z);
+  startAct(a, "seal", 1, { done: () => {
+    if (k.state !== "ok") return;
+    G.sealed = true;
+    k.state = "sealed";
+    k.grab = null;
+    a.inv.part = null;
+    a.score += 20;
+    a.stat.seal++;
+    sfx("seal");
+    sayAll(`${a.name}がお札を貼った！ カカシ男がくずれていく…`, "good");
+  }, cancel: () => {
+    if (k.stun) k.stun.sealing = false;
+  } });
+  return true;
+}
+function objectiveCands(a, add) {
+  for (const v of G.vehicles) {
+    if (v.state === "gone") continue;
+    let px, pz, r;
+    if (v.kind !== "boat") {
+      const fx2 = Math.sin(v.rot), fz = Math.cos(v.rot), t = clamp((a.x - v.x) * fx2 + (a.z - v.z) * fz, -2, 2);
+      px = v.x + fx2 * t;
+      pz = v.z + fz * t;
+      r = 2.2;
+    } else {
+      px = W.dockEnd.x;
+      pz = W.dockEnd.z;
+      r = 2.4;
+    }
+    const need = Object.keys(v.parts).filter((k2) => !v.parts[k2]);
+    let E;
+    if (a.inv.part && v.parts[a.inv.part] === false) E = { label: `${v.name}に${ITEMS[a.inv.part].name}をつける`, fn: () => installPart(a, v) };
+    else if (!need.length) E = v.seats.includes(null) ? { label: v.seats[0] ? `${v.name}に乗る` : `${v.name}を運転する`, fn: () => board(a, v) } : { label: "満員", fn: null };
+    else E = { label: `${v.name}: ${need.map((k2) => ITEMS[k2].short).join("・")}が必要`, fn: null };
+    add(px, pz, r, E, null, 0.2);
+  }
+  const sp = W.sp;
+  if (sp.fusebox && !G.phone.fuse) add(sp.fusebox.fx, sp.fusebox.fz, 1.4, a.inv.part === "fuse" ? { label: "配電盤にヒューズをつける", fn: () => installPart(a, "fusebox") } : { label: "配電盤: ヒューズが必要", fn: null });
+  if (sp.phone && !G.phone.called) add(sp.phone.fx, sp.phone.fz, 1.4, G.phone.fuse ? { label: "警察に電話する", fn: () => callPolice(a) } : { label: "電話: 電気が来ていない(配電盤にヒューズ)", fn: null });
+  if (sp.radio && !G.radio.used) add(sp.radio.fx, sp.radio.fz, 1.5, { label: "無線で助けを呼ぶ", fn: () => useRadio(a) });
+  const k = G.killer;
+  if (k && canSeal(a)) add(k.x, k.z, 2.7, { label: "お札を貼る！", fn: () => sealKiller(a) }, null, 3);
+}
+function escape(a, how) {
+  if (!alive(a)) return;
+  a.state = "escaped";
+  a.how = how;
+  a.vehicle = null;
+  a.seat = -1;
+  a.path = null;
+  a.act = null;
+  a.score += 10;
+  sayAll(`${a.name}が${HOW[how] || "車"}で逃げきった！`, "good");
+  tellSfx(a, "win");
+  bus.emit("escaped", a);
+}
+function vehicleBlocked(v, x, z, rot) {
+  const fx2 = Math.sin(rot), fz = Math.cos(rot);
+  if (v.kind !== "boat") {
+    for (const o of [-1.4, 0, 1.4]) {
+      const px = x + fx2 * o, pz = z + fz * o;
+      for (const [dx, dz] of [[0, 0], [0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8]]) {
+        const c = cellAt(px + dx, pz + dz);
+        if (c < 0 || blocksCar(c)) return true;
+      }
+    }
+    return false;
+  }
+  for (const o of [-1, 0, 1.1]) {
+    const px = x + fx2 * o, pz = z + fz * o;
+    for (const [dx, dz] of [[0, 0], [0.7, 0], [-0.7, 0], [0, 0.7], [0, -0.7]]) {
+      const c = cellAt(px + dx, pz + dz);
+      if (c < 0 || T[c] !== 3) return true;
+    }
+  }
+  return false;
+}
+function aiDrive(v, dt) {
+  if (v.kind === "boat") {
+    const t = W.boatExit, want2 = Math.atan2(t.x - v.x, t.z - v.z), df2 = angDiff(v.rot, want2);
+    return [Math.abs(df2) > 1.2 ? 0.4 : 1, clamp(-df2 * 1.8, -1, 1)];
+  }
+  if (!v.route) {
+    const k = G.killer;
+    const [a, b] = v.routes.map((r) => W.routes[r]);
+    let best = Math.random() < 0.5 ? a : b;
+    if (k && alive(k)) {
+      const da = Math.hypot(k.x - a[1][0], k.z - a[1][1]), db = Math.hypot(k.x - b[1][0], k.z - b[1][1]);
+      best = da < db ? b : a;
+    }
+    v.route = best;
+    v.ri = 0;
+  }
+  const R = v.route;
+  while (v.ri < R.length - 1 && Math.hypot(R[v.ri][0] - v.x, R[v.ri][1] - v.z) < 7) v.ri++;
+  const [tx, tz] = R[v.ri];
+  const want = Math.atan2(tx - v.x, tz - v.z), df = angDiff(v.rot, want);
+  if (v.revT > 0) {
+    v.revT -= dt;
+    return [-1, clamp(df * 1.5, -1, 1)];
+  }
+  if (Math.abs(v.v) < 0.6) {
+    v.stuckT += dt;
+    if (v.stuckT > 1.8) {
+      v.stuckT = 0;
+      v.revT = 1.1;
+    }
+  } else v.stuckT = 0;
+  return [Math.abs(df) > 1.4 ? 0.5 : 1, clamp(-df * 1.8, -1, 1)];
+}
+function updateVehicle(v, dt) {
+  if (v.state === "gone") {
+    if (v.goneT > 0) {
+      v.goneT -= dt;
+      v.x += Math.sin(v.rot) * 14 * dt;
+      v.z += Math.cos(v.rot) * 14 * dt;
+      if (v.goneT <= 0) v.mesh.visible = false;
+    }
+    return;
+  }
+  if (v.state === "starting") {
+    v.startT -= dt;
+    if (v.startT <= 0) {
+      v.state = "running";
+      v.waitT = 0;
+    }
+  }
+  const drv = v.seats[0];
+  let thr = 0, st = 0;
+  if (v.state === "running" && drv) {
+    if (drv.ctrl === "player") {
+      const m = moveAxes();
+      thr = m.f;
+      st = m.r;
+    } else if (drv.ctrl === "remote") {
+      thr = drv.netDrive ? drv.netDrive[0] : 0;
+      st = drv.netDrive ? drv.netDrive[1] : 0;
+    } else {
+      v.waitT += dt;
+      const k2 = G.killer, kd = k2 && alive(k2) ? dist(v, k2) : 99;
+      const full = !v.seats.includes(null);
+      const coming = G.students.some((s) => s.state === "ok" && s.ai && s.ai.task && s.ai.task.type === "board" && s.ai.task.obj === v && dist(s, v) < 30);
+      const humanNear = G.students.some((s) => (s.ctrl === "player" || s.ctrl === "remote") && s.state === "ok" && dist(s, v) < 22);
+      if (full || kd < 13 || v.waitT > 9 || !coming && !humanNear && v.waitT > 2.5) [thr, st] = aiDrive(v, dt);
+    }
+  }
+  if (v.stall > 0) {
+    v.stall -= dt;
+    thr = Math.min(thr, 0);
+  }
+  const isCar = v.kind !== "boat";
+  const c = cellAt(v.x, v.z);
+  const solo = v.seats.filter(Boolean).length === 1;
+  const perk = drv ? 1 + (pm(drv, isCar ? "carSpd" : "boatSpd") + (solo ? pm(drv, "soloSpd") : 0)) / 100 : 1;
+  const maxF = (isCar ? c >= 0 && ROAD[c] ? 15 : 10 : 8) * perk, maxR = isCar ? 5 : 2.5;
+  if (thr > 0) v.v += thr * (isCar ? 7 : 4) * dt;
+  else if (thr < 0) v.v += thr * (v.v > 0 ? 12 : 5) * dt;
+  else v.v -= Math.sign(v.v) * Math.min(Math.abs(v.v), (isCar ? 3 : 1.5) * dt);
+  v.v = clamp(v.v, -maxR, maxF);
+  v.steer += (st * (isCar ? 0.55 : 0.8) - v.steer) * Math.min(1, dt * 6);
+  const turn = isCar ? v.v / 2.6 * Math.tan(v.steer) : v.steer * 1 * Math.min(1, Math.abs(v.v) / 2.5) * Math.sign(v.v || 1);
+  const nrot = v.rot - turn * dt;
+  const nx = v.x + Math.sin(nrot) * v.v * dt, nz = v.z + Math.cos(nrot) * v.v * dt;
+  if (Math.abs(v.v) > 0.01) {
+    if (vehicleBlocked(v, nx, nz, nrot)) {
+      if (Math.abs(v.v) > 4) sfxAt("doorHit", v.x, v.z, 30, 0.5);
+      v.v *= -0.25;
+    } else {
+      v.x = nx;
+      v.z = nz;
+      v.rot = nrot;
+    }
+  }
+  const k = G.killer;
+  if (isCar && k && k.state === "ok" && Math.abs(v.v) > 2) {
+    const sgn = v.v > 0 ? 1 : -1, fx2 = v.x + Math.sin(v.rot) * 1.9 * sgn, fz = v.z + Math.cos(v.rot) * 1.9 * sgn;
+    if (Math.hypot(k.x - fx2, k.z - fz) < 1.4 && guarding(k) && Math.abs(angDiff(k.rot, Math.atan2(v.x - k.x, v.z - k.z))) < 1.3) {
+      sfxAt("block", k.x, k.z, 40);
+      v.v = 0;
+      v.stall = 2.5;
+      if (G.t - (v.stopMsgT || -99) > 3) {
+        v.stopMsgT = G.t;
+        sayAll(`カカシ男が${v.name}を止めた！`, "bad");
+      }
+    } else if (Math.hypot(k.x - fx2, k.z - fz) < 1.4) {
+      if (Math.abs(v.v) > 5) {
+        hurtKiller(k, 20, drv);
+        if (stunKiller(k, 16, drv, { big: true, force: true })) sayAll(`${v.name}でカカシ男をはねた！`, "good");
+      }
+      sfxAt("hit", k.x, k.z, 40);
+      v.v = 0;
+      v.stall = 1.6;
+    }
+  }
+  if (v.state === "running") {
+    let out = false;
+    if (isCar) {
+      for (const e2 of W.exits) if (Math.hypot(v.x - e2.x, v.z - e2.z) < 8) out = true;
+    } else if (Math.hypot(v.x - W.boatExit.x, v.z - W.boatExit.z) < 6) out = true;
+    if (out) {
+      for (const s of v.seats) if (s) escape(s, v.model);
+      v.seats.fill(null);
+      v.state = "gone";
+      v.goneT = 2.5;
+      if (v.light) v.light.intensity = 0;
+    }
+  }
+  if (v.state === "running" && Math.abs(v.v) > 1 && Math.random() < dt * 2) emitNoise(v.x, v.z, isCar ? 45 : 35, "engine", drv);
+}
+function updatePolice(dt) {
+  const P4 = G.phone;
+  if (P4.called && !P4.arrived) {
+    P4.eta -= dt;
+    if (P4.eta <= 0) {
+      const k = G.killer;
+      let e2 = pick(W.exits);
+      if (k && alive(k) && Math.random() < 0.7) e2 = W.exits.slice().sort((a, b) => Math.hypot(b.x - k.x, b.z - k.z) - Math.hypot(a.x - k.x, a.z - k.z))[0];
+      P4.arrived = true;
+      P4.exit = e2;
+      P4.zone = { x: e2.x, z: e2.z, r: 8 };
+      P4.mesh.visible = true;
+      P4.mesh.position.set(e2.x, 0, e2.z);
+      P4.mesh.rotation.y = e2.id === "n" ? 0 : Math.PI / 2;
+      P4.light.position.set(e2.x, 2.5, e2.z);
+      P4.light.intensity = 40;
+      sfx("siren");
+      sayAll(`警察が${e2.name}に着いた！ 走りこめ！`, "good");
+    }
+  }
+  if (P4.arrived) {
+    const on = Math.floor(G.t * 5) % 2 === 0;
+    P4.light.color.setHex(on ? 16719904 : 2117887);
+    P4.mesh.userData.red.emissive.setHex(on ? 16719904 : 2228224);
+    P4.mesh.userData.blue.emissive.setHex(on ? 2082 : 2117887);
+    for (const s of G.students) if (s.state === "ok" && Math.hypot(s.x - P4.zone.x, s.z - P4.zone.z) < P4.zone.r) escape(s, "police");
+  }
+}
+function updateHero() {
+  const R = G.radio;
+  if (!R.used || G.hero || G.left < 60) return;
+  const out = G.students.filter((s) => s.state === "dead" || s.state === "escaped").length;
+  if (out < HERO_NEED) return;
+  if (R.readyT < 0) {
+    R.readyT = G.t;
+    sayAll("どこかで車のエンジン音がする… ゲンが向かっている", "info");
+  }
+  if (G.t - R.readyT < HERO_DELAY) return;
+  const k = G.killer;
+  let e2 = W.exits[1];
+  if (k && alive(k)) e2 = W.exits.slice().sort((a, b) => Math.hypot(b.x - k.x, b.z - k.z) - Math.hypot(a.x - k.x, a.z - k.z))[0];
+  const p = snapFree(e2.x * 0.9, e2.z * 0.9, 0.35, 8);
+  const humans = G.students.filter((s) => !s.hero && (s.ctrl === "player" || s.ctrl === "remote") && (s.state === "dead" || s.state === "escaped"));
+  const who = humans.length ? pick(humans) : null;
+  const h = makeHero(HERO, p.x, p.z, who ? who.ctrl : "ai");
+  h.peer = who ? who.peer : null;
+  rememberMaterials(h.rig);
+  G.scene.add(h.rig.root);
+  h.ai = { skill: 1.3, think: 0, kt: -99, kseen: -99, mem: {} };
+  G.actors.push(h);
+  G.students.push(h);
+  G.hero = h;
+  speak(h, "arrive", { force: true, delay: 0.8 });
+  sayAll("猟師のゲンが来た！ 猟銃を持っている", "good");
+  if (who && who.ctrl === "player") {
+    G.me = h;
+    G.view = h;
+    bus.emit("heroControl", h);
+    tell(h, "ゲンとして戦え！ 猟銃(左クリック)はカカシ男を大きくひるませる(1発)", "good");
+  } else if (who && who.peer && NETH.toPeer) NETH.toPeer(who.peer, { e: "you", id: h.id });
+}
+function updateObjectives(dt) {
+  for (const v of G.vehicles) updateVehicle(v, dt);
+  updatePolice(dt);
+  updateHero();
+}
+function syncVehicles() {
+  for (const v of G.vehicles) {
+    if (!v.mesh.visible) continue;
+    v.mesh.position.set(v.x, v.kind === "boat" ? Math.sin(G.t * 1.7) * 0.04 : 0, v.z);
+    v.mesh.rotation.y = v.rot;
+    if (v.kind === "boat") v.mesh.rotation.z = Math.sin(G.t * 1.3) * 0.03;
+    const S2 = SEATS[v.model], fx2 = Math.sin(v.rot), fz = Math.cos(v.rot), rx = -fz, rz = fx2;
+    v.seats.forEach((s, i) => {
+      if (!s) return;
+      const [ox, oz] = S2[i];
+      s.x = v.x - rx * ox + fx2 * oz;
+      s.z = v.z - rz * ox + fz * oz;
+      s.rot = v.rot;
+      s.y = v.kind === "boat" ? 0.05 : 0.12;
+    });
+  }
+}
+var vehicleLabel = (v) => v.state === "gone" ? "脱出ずみ" : ready2(v) ? "動かせる！" : Object.keys(v.parts).filter((k) => !v.parts[k]).map((k) => ITEMS[k].short).join("・") + "が必要";
+
 // src/combat.js
 function emitNoise(x, z, r, kind, src) {
   if (src && src.kind === "student") r *= 1 + pm(src, "noise") / 100;
@@ -15903,7 +15960,8 @@ function dropEverything(s) {
 function killerSwing(k, heavy = false) {
   if (k.atk || k.lunge || k.missT > 0 || k.stun || k.getUp > 0 || k.grab || k.grabTry || k.grabMissT > 0 || k.morphT > 0 || k.searchT > 0 || k.state !== "ok") return false;
   heavy = heavy || k.stance;
-  k.atk = heavy ? { t: 0, dur: 0.95, hit: 0.5, done: false, lock: true, heavy: true } : { t: 0, dur: 0.62, hit: 0.27, done: false, lock: true };
+  k.atk = heavy ? { t: 0, dur: 0.95, hit: 0.5, done: false, heavy: true } : { t: 0, dur: 0.62, hit: 0.27, done: false };
+  k.atkSlowUntil = G.t + KILLER.atkSlow;
   k.dashT = 0;
   sfxAt("swing", k.x, k.z, 25);
   return true;
@@ -15921,7 +15979,7 @@ function killerHit(k) {
       best = s;
     }
   }
-  const boat = G.vehicles.find((v) => v.kind === "boat");
+  const boat = G.vehicles.find((v2) => v2.kind === "boat");
   if (!best && boat && boat.state !== "gone") {
     for (const s of boat.seats) if (s && dist(k, s) < 2.8) best = s;
   }
@@ -15940,7 +15998,53 @@ function killerHit(k) {
     return;
   }
   const w = windowInFront(k, 1.9);
-  if (w && w.state !== "broken") breakWindow(w);
+  if (w && w.state !== "broken") {
+    breakWindow(w, k);
+    return;
+  }
+  const v = carInFront(k);
+  if (v) hitCar(k, v);
+}
+function carInFront(k) {
+  for (const v of G.vehicles) {
+    if (v.kind === "boat" || v.state === "gone") continue;
+    const fx2 = Math.sin(v.rot), fz = Math.cos(v.rot);
+    for (const o of [-1.4, 0, 1.4]) {
+      const px = v.x + fx2 * o, pz = v.z + fz * o, d = Math.hypot(px - k.x, pz - k.z);
+      if (d < 2.2 && Math.abs(angDiff(k.rot, Math.atan2(px - k.x, pz - k.z))) < 1.2) return v;
+    }
+  }
+  return null;
+}
+function hitCar(k, v) {
+  v.khits = (v.khits || 0) + 1;
+  sfxAt("doorHit", v.x, v.z, 40);
+  emitNoise(v.x, v.z, 28, "door", null);
+  if (v.khits < KILLER.carHits) {
+    tell(k, `${v.name}をこわす(あと ${KILLER.carHits - v.khits} 回)`, "dim");
+    return;
+  }
+  v.khits = 0;
+  v.v = 0;
+  v.stall = 2.5;
+  for (const s of v.seats) if (s) {
+    leaveVehicle(s, true);
+    s.trip = 0.6;
+  }
+  if (v.state === "running" || v.state === "starting") v.state = "parked";
+  if (v.light) {
+    v.light.intensity = 0;
+    v.mesh.userData.headMat.emissive.setHex(0);
+  }
+  const have = Object.keys(v.parts).filter((p) => v.parts[p]);
+  const type = have.length ? have[Math.floor(Math.random() * have.length)] : null;
+  if (type) {
+    v.parts[type] = false;
+    const p = carSpot(v, k);
+    spawnItem(type, p.x, p.z);
+  }
+  sfxAt("doorBreak", v.x, v.z, 45);
+  sayAll(`カカシ男が${v.name}をこわした！` + (type ? ` ${ITEMS[type].name}が外れた` : ""), "bad");
 }
 function killerLunge(k, heavy = false) {
   if (k.state !== "ok" || k.atk || k.lunge || k.missT > 0 || k.stun || k.getUp > 0 || k.grab || k.grabTry || k.grabMissT > 0 || k.killT != null || k.morphT > 0 || k.searchT > 0 || k.throwT > 0 || k.swim) return false;
@@ -16002,7 +16106,7 @@ function endLunge(k, s) {
   k.atk = heavy ? { t: 0.5, dur: 0.95, hit: 0.5, done: true, lock: true, heavy: true } : { t: 0.27, dur: 0.62, hit: 0.27, done: true, lock: true };
   if (s) {
     sfxAt("hit", s.x, s.z, 30);
-    damage(s, km(k, "swing", KILLER.swing) * (heavy ? STANCE.heavy : 1), "swing");
+    damage(s, km(k, "swing", KILLER.swing) * (heavy ? STANCE.heavy : 1) * LUNGE.dmg, "swing");
     if (alive(s) && s.state === "ok") {
       const p = snapFree(s.x + Math.sin(k.rot) * 0.6, s.z + Math.cos(k.rot) * 0.6, s.r, 2);
       place(s, p.x, p.z);
@@ -16016,7 +16120,7 @@ function endLunge(k, s) {
   }
   const w = windowInFront(k, 1.6);
   if (w && w.state !== "broken") {
-    breakWindow(w);
+    breakWindow(w, k);
     return;
   }
   k.atk = null;
@@ -16075,7 +16179,7 @@ function breakDoor(d) {
   G.scene.add(deb);
   G.debris.push(deb);
 }
-function breakWindow(w) {
+function breakWindow(w, by = null) {
   if (w.state === "broken") return;
   w.state = "broken";
   setWindowLook(w);
@@ -16083,6 +16187,15 @@ function breakWindow(w) {
   emitNoise(w.x, w.z, 28, "glass", null);
   bus.emit("shards", w.x, w.z);
   if (NETH.toAll) NETH.toAll({ e: "shards", x: w.x, z: w.z });
+  if (by && by.kind === "killer") {
+    for (const s of G.students) {
+      if (s.state !== "ok" || s.god) continue;
+      const thru = !!(s.vault && s.vault.win === w);
+      if (!thru && Math.hypot(s.x - w.x, s.z - w.z) > KILLER.glassR) continue;
+      damage(s, thru ? KILLER.glassVault : KILLER.glassNear, "glass");
+      if (alive(s)) tell(s, thru ? "乗りこえている時に窓をわられた！ ガラスが刺さった" : "われた窓のガラスが刺さった！", "bad");
+    }
+  }
 }
 function studentSwing(s, aim, heavy = false) {
   if (!s.inv || !s.inv.weapon || s.atk || s.state !== "ok" || s.act || s.vault || s.down || s.trip > 0 || s.trapped || s.swim) return false;
@@ -16270,14 +16383,14 @@ function updateKillerStun(k, dt) {
     if (st.down) k.getUp = 0.7;
   }
 }
-function startGrab(k, s) {
-  if (!k || !s || k.state !== "ok" || k.grab || k.grabTry || k.grabMissT > 0 || k.stun || k.getUp > 0 || k.atk || k.lunge || k.missT > 0 || k.searchT > 0 || k.morphT > 0 || k.throwT > 0) return false;
-  k.grabTry = { s, t: 0 };
+function startGrab(k, s = null) {
+  if (!k || k.state !== "ok" || k.grab || k.grabTry || k.grabMissT > 0 || k.stun || k.getUp > 0 || k.atk || k.lunge || k.missT > 0 || k.searchT > 0 || k.morphT > 0 || k.throwT > 0) return false;
+  k.grabTry = { t: 0 };
   k.mx = k.mz = 0;
   k.path = null;
   k.dashT = 0;
   k.stance = false;
-  k.rot = Math.atan2(s.x - k.x, s.z - k.z);
+  if (s) k.rot = Math.atan2(s.x - k.x, s.z - k.z);
   sfxAt("swing", k.x, k.z, 14);
   return true;
 }
@@ -16285,23 +16398,31 @@ function grabTick(k, dt) {
   if (k.grabMissT > 0) k.grabMissT -= dt;
   const g = k.grabTry;
   if (!g) return;
-  const s = g.s;
   if (k.state !== "ok" || k.stun) {
     k.grabTry = null;
     return;
   }
   g.t += dt;
-  if (s && s.state === "ok") k.rot = Math.atan2(s.x - k.x, s.z - k.z);
-  if (g.t < KILLER.grabReach) return;
-  k.grabTry = null;
-  const d = s ? Math.hypot(s.x - k.x, s.z - k.z) : 99;
-  if (s && s.state === "ok" && !s.vault && !s.dodge && d <= KILLER.grabRange && meleeClear(k.x, k.z, s.x, s.z)) {
-    grab(k, s);
+  const cx = k.x + Math.sin(k.rot) * KILLER.grabFwd, cz = k.z + Math.cos(k.rot) * KILLER.grabFwd;
+  let best = null, bd = 1e9;
+  for (const s of G.students) {
+    if (s.state !== "ok" || s.vault || s.dodge || s.god) continue;
+    const d = Math.hypot(s.x - cx, s.z - cz);
+    if (d > KILLER.grabR + (s.r || 0.3) * 0.5 || !meleeClear(k.x, k.z, s.x, s.z)) continue;
+    if (d < bd) {
+      bd = d;
+      best = s;
+    }
+  }
+  if (best) {
+    k.grabTry = null;
+    grab(k, best);
     return;
   }
+  if (g.t < KILLER.grabDur) return;
+  k.grabTry = null;
   k.grabMissT = KILLER.grabMiss;
   tell(k, "つかみそこねた！", "dim");
-  if (s && s.state === "ok") tell(s, "つかみをよけた！", "good");
 }
 function grab(k, s) {
   if (s.god) return false;
@@ -16476,9 +16597,10 @@ function useStalk(k) {
 }
 function useMorph(k, x, z) {
   if (!ready3(k, "morph") || k.grab || k.morphT > 0) return false;
-  const p = snapFree(x, z, 0.45, 12);
+  const c0 = cellAt(x, z);
+  const p = c0 >= 0 && T[c0] === 3 && freeAt(x, z, 0.45, true) ? { x, z } : snapFree(x, z, 0.45, 12);
   const c = cellAt(p.x, p.z);
-  if (c < 0 || T[c] !== 0 && T[c] !== 8) return false;
+  if (c < 0 || T[c] !== 0 && T[c] !== 8 && T[c] !== 3) return false;
   k.cd.morph = KILLER.cd.morph * cdMul(k) * km(k, "cdMorph");
   k.morphT = 1;
   k.atk = null;
@@ -16668,9 +16790,9 @@ function updateCombat(dt) {
         if (s.dodge) continue;
         if ((s.x - p.x) ** 2 + (s.z - p.z) ** 2 < 0.55 * 0.55 && p.y < 2) {
           damage(s, KILLER.sickleDmg, "sickle");
-          s.slowT = 2.5;
+          s.sickleSlowUntil = G.t + KILLER.sickleSlow;
           sfxAt("hit", s.x, s.z, 25);
-          if (alive(s)) tell(s, "投げ鎌が当たった！", "bad");
+          if (alive(s)) tell(s, `投げ鎌が当たった！ ${KILLER.sickleSlow} 秒 足がとてもおそい`, "bad");
           hit = true;
           break;
         }
@@ -17048,7 +17170,8 @@ function speedOf(a) {
     let s2 = KILLER.speed * km(a, "speed") * (a.ctrl === "ai" ? DIFF[G.diff].kSpeed : 1) * (G.rage ? 1.05 : 1);
     if (a.grab) s2 = KILLER.carry;
     if (a.stance) s2 *= KILLER.stanceSpeed;
-    if (a.swim) s2 *= Math.min(1, KILLER.swimSpeed * km(a, "swim"));
+    if (a.swim) s2 *= KILLER.swimSpeed * km(a, "swim");
+    if (G.t < (a.atkSlowUntil || 0)) s2 *= KILLER.atkSlowMul;
     if (a.slowT > 0) s2 *= 0.6;
     if (a.blind > 0.5) s2 *= 1 - 0.45 * a.blind;
     return s2;
@@ -17062,6 +17185,7 @@ function speedOf(a) {
   if (a.shine) s *= FLASH.slow;
   if (a.hp < 40) s *= 0.82;
   if (a.slowT > 0) s *= 0.6;
+  if (a.sickleNet || G.t < (a.sickleSlowUntil || 0)) s *= KILLER.sickleSlowMul;
   return s;
 }
 function updateActor(a, dt) {
@@ -17449,7 +17573,8 @@ var canSee = (a, b, range, fov = 1.3) => {
 // src/player.js
 import * as THREE15 from "three";
 var CAM = { yaw: Math.PI, pitch: 0.3, shake: 0, aimY: 0 };
-var PL = { choice: null, mapOpen: false, morph: false, spect: 0, ff: false, skill: null, hold: null, pk: null, hitbox: false };
+var PL = { choice: null, mapOpen: false, morph: false, spect: 0, ff: false, skill: null, hold: null, pk: null, eh: null, hitbox: false };
+var BARR_HOLD = 0.45;
 var camera2 = null;
 var tmp = new THREE15.Vector3();
 function initPlayer(cam) {
@@ -17489,6 +17614,12 @@ function initPlayer(cam) {
   });
   bus.on("release", (a, info) => {
     mashRelease(info);
+    if (a === "use" && PL.eh) {
+      const h2 = PL.eh;
+      PL.eh = null;
+      if (!h2.fired && G.mode === "play" && !G.paused && G.me && alive(G.me)) sendCmd({ k: "use", yaw: CAM.yaw });
+      return;
+    }
     const h = PL.pk;
     if (!h || h.fired || a !== "s" + (h.i + 1)) return;
     PL.pk = null;
@@ -17612,6 +17743,10 @@ function onPress(a, info) {
   }
   switch (a) {
     case "use":
+      if (PL.choice && PL.choice.R && PL.choice.R.hold) {
+        PL.eh = { t: 0, fired: false };
+        break;
+      }
       sendCmd({ k: "use", yaw });
       break;
     case "alt":
@@ -17688,6 +17823,17 @@ function updatePlayer(dt) {
       if (PL.pk.t >= DROP_HOLD) {
         PL.pk.fired = true;
         sendCmd({ k: "dropp", i: PL.pk.i });
+      }
+    }
+  }
+  if (PL.eh && !PL.eh.fired) {
+    const me0 = G.me;
+    if (!me0 || me0.kind === "killer" || !alive(me0)) PL.eh = null;
+    else {
+      PL.eh.t += dt;
+      if (PL.eh.t >= BARR_HOLD) {
+        PL.eh.fired = true;
+        sendCmd({ k: "alt", yaw: CAM.yaw });
       }
     }
   }
