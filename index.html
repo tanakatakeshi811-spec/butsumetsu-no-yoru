@@ -11893,7 +11893,7 @@ function killerChoices(k, look) {
   for (const s of G.students) if (s.state === "ok" && !s.vault && !s.dodge && meleeClear(k.x, k.z, s.x, s.z)) add(s.x, s.z, 1.9, { label: `つかむ: ${s.name}`, fn: () => {
     startGrab(k, s);
   } }, 1);
-  const grabE = { label: "つかむ(前へ手をのばす)", fn: () => {
+  const grabE = { label: "つかむ(前へ手をのばす)", quiet: true, fn: () => {
     startGrab(k);
   } };
   for (const h of W.hides) add(h.fx, h.fz, 1.6, { label: `しらべる: ${h.label}`, fn: () => killerSearchHide(k, h) });
@@ -15072,7 +15072,7 @@ function updateHUD(dt) {
   const c = me && me.state !== "dead" && G.me === G.view ? getChoice() : null;
   if (c && !G.touch) {
     const parts = [];
-    if (c.E) parts.push(el("span", { class: c.E.fn || c.mash ? "" : "off" }, c.E.fn || c.mash ? el("kbd", null, "E") : null, c.E.label));
+    if (c.E && !c.E.quiet) parts.push(el("span", { class: c.E.fn || c.mash ? "" : "off" }, c.E.fn || c.mash ? el("kbd", null, "E") : null, c.E.label));
     if (c.R) parts.push(el("span", { class: c.R.fn ? "" : "off" }, el("kbd", null, "R"), c.R.label));
     if (c.hint) parts.push(el("span", { class: "off" }, c.hint));
     const key = parts.map((p) => p.textContent).join("|");
